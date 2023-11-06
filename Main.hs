@@ -8,7 +8,7 @@ height = 512
 offset = 100
 
 window :: Display
-window = InWindow "Gradient" (width, height) (0, 0)
+window = InWindow "Fractal Renderer" (width, height) (0, 0)
 
 background :: Color
 background = black
