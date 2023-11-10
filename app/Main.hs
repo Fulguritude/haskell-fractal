@@ -7,6 +7,8 @@ width  = 1024
 height = 512
 offset = 100
 
+-- bob :: String = 3
+
 window :: Display
 window = InWindow "Fractal Renderer" (width, height) (0, 0)
 
