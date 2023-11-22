@@ -25,6 +25,7 @@ dependencies:
 
 ghc-options:
 - -Wall
+- -Wno-tabs
 - -Wcompat
 - -Widentities
 - -Wincomplete-record-updates
@@ -33,6 +34,10 @@ ghc-options:
 - -Wmissing-home-modules
 - -Wpartial-fields
 - -Wredundant-constraints
+- -O2
+- -threaded
+# - -rtsopts
+# - "-with-rtsopts=-N -qg"
 
 library:
   source-dirs: src

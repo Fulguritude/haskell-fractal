@@ -2,15 +2,13 @@ module Main(main) where
 
 import Graphics.Gloss
 
-width, height, offset :: Int
-width  = 1024
-height = 512
-offset = 100
-
--- bob :: String = 3
+g_width, g_height, g_offset :: Int
+g_width  = 1024
+g_height = 512
+g_offset = 100
 
 window :: Display
-window = InWindow "Fractal Renderer" (width, height) (0, 0)
+window = InWindow "Fractal Renderer" (g_width, g_height) (0, 0)
 
 background :: Color
 background = black
@@ -54,7 +52,7 @@ create_gradient (width) (height) =
 
 
 drawing :: Picture
-drawing = create_gradient width height
+drawing = create_gradient g_width g_height
 
 main :: IO ()
 main = display window background drawing
