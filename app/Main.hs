@@ -1,6 +1,12 @@
+-- {-# LANGUAGE OverloadedRecordFields #-}
+
 module Main(main) where
 
+-- import Numeric.Algebra
 import Graphics.Gloss
+-- import Data.Colour.Palette
+
+type GFloat = Float
 
 g_width, g_height, g_offset :: Int
 g_width  = 1024
@@ -18,6 +24,77 @@ data PixelArray = PixelArray {
 	h      :: Int,
 	pixels :: [[Color]]
 }
+
+type Palette = [Color]
+
+class Ring a where
+	(+.) :: a -> a -> a
+	(-.) :: a -> a -> a
+	(*.) :: a -> a -> a
+
+data Pairwise = Pairwise { xx :: GFloat, yy :: GFloat }
+data Complex  = Complex  { cr :: GFloat, ci :: GFloat }
+data Dual     = Dual     { dr :: GFloat, de :: GFloat }
+data Perplex  = Perplex  { pr :: GFloat, pi :: GFloat }
+data Polar    = Polar    { md :: GFloat, th :: GFloat }
+
+instance Ring Pairwise where
+    (+.) a b = Pairwise {xx = (xx a) + (xx b), yy = (yy a) + (yy b)}
+    (-.) a b = Pairwise {xx = (xx a) - (xx b), yy = (yy a) - (yy b)}
+    (*.) a b = Pairwise {xx = (xx a) * (xx b), yy = (yy a) * (yy b)}
+
+instance Ring Complex where
+    (+.) a b = Complex {cr = (cr a) + (cr b), ci = (ci a) + (ci b)}
+    (-.) a b = Complex {cr = (cr a) - (cr b), ci = (ci a) - (ci b)}
+    (*.) a b =
+		Complex {
+			cr = (cr a) * (cr b) - (ci a) * (ci b),
+			ci = (cr a) * (ci b) + (cr a) * (ci b)
+		}
+
+
+
+
+newtype Polynomial a = Polynomial [a]  deriving (Show, Eq)
+
+-- instance Polynomial a => Polynomial (Ring a) where
+--     (+.) (Ring x) (Ring ys) = Ring (xs + ys)
+--     (-.) (Ring x) (Ring ys) = Ring (xs + ys)
+--     (*.) (Ring x) (Ring ys) = Ring (xs + ys)
+
+
+
+
+
+data IterationProtocol =
+	Julia       |
+	Mandelbrot  |
+	Newton      |
+	Burningship |
+	Duquesne    |
+	None
+	deriving (Eq, Enum, Show)
+
+data ETF a = ETF {
+	protocol      :: IterationProtocol,
+	compute_dwell :: DwellFunction a,
+	zoom          :: GFloat,
+	anchor        :: a,
+	radius        :: GFloat,
+	radius_sqrd   :: GFloat,
+	-- is_static     :: Bool,
+	palette       :: Palette,
+	-- param         :: Ring,
+	-- cur_coef      :: Int,
+	iter_poly     :: Polynomial a
+}
+
+type DwellFunction a = ETF a -> a -> Int
+
+
+
+
+
 
 picture_from_pixelarray :: PixelArray -> Picture
 picture_from_pixelarray pixel_array =
@@ -38,6 +115,7 @@ picture_from_pixelarray pixel_array =
 	result
 
 
+{-
 create_gradient :: Int -> Int -> Picture
 create_gradient (width) (height) =
 	let normalize_color (pos) (x) = fromIntegral (x) / fromIntegral (pos) in
@@ -49,7 +127,9 @@ create_gradient (width) (height) =
 	let pixel_array           = PixelArray { w = width, h = height, pixels = color_matrix } in
 	let result                = picture_from_pixelarray (pixel_array) in
 	result
+-}
 
+-- create_mandelbrot :: Int -> Int -> 
 
 drawing :: Picture
 drawing = create_gradient g_width g_height
