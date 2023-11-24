@@ -1,11 +1,9 @@
--- {-# LANGUAGE OverloadedRecordFields #-}
-{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main(main) where
 
 -- import Numeric.Algebra
 import Graphics.Gloss
-import Text.ParserCombinators.ReadP (get)
 -- import Data.Colour.Palette
 
 
@@ -211,18 +209,17 @@ instance Geom2D Perplex where
 
 newtype Polynomial a = Polynomial [a] deriving (Show, Eq)
 
-class (Ring a, Eq a) => PolynomialOps a where
+class (Ring a) => PolynomialOps a where
 	evaluate   :: Polynomial a -> a -> a
 	degree     :: Polynomial a -> Int
 	fix_degree :: Polynomial a -> Polynomial a
 
-
-add_poly :: Ring a => [a] -> [a] -> [a]
+add_poly :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
 add_poly (  []) (  ys) = ys
 add_poly (  xs) (  []) = xs
 add_poly (x:xs) (y:ys) = (x +. y) : add_poly (xs) (ys)
 
-sub_poly :: Ring a => [a] -> [a] -> [a]
+sub_poly :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
 sub_poly (  []) (  ys) = map neg ys
 sub_poly (  xs) (  []) = xs
 sub_poly (x:xs) (y:ys) = (x -. y) : sub_poly (xs) (ys)
@@ -243,7 +240,31 @@ instance (Ring a, Geom2D a) => Ring (Polynomial a) where
 	(-.) (Polynomial xs) (Polynomial ys) = Polynomial (sub_poly (xs) (ys))
 	(*.) (Polynomial xs) (Polynomial ys) = Polynomial (mul_poly (xs) (ys))
 
-instance  (Ring a, Geom2D a) => PolynomialOps (Polynomial a) where
+instance PolynomialOps Pairwise where
+	evaluate (Polynomial (  [])) (_) = zero
+	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
+
+	degree (Polynomial []) = 0
+	degree (Polynomial cs) = (length cs) - 1
+
+	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
+instance PolynomialOps Dual where
+	evaluate (Polynomial (  [])) (_) = zero
+	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
+
+	degree (Polynomial []) = 0
+	degree (Polynomial cs) = (length cs) - 1
+
+	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
+instance PolynomialOps Complex where
+	evaluate (Polynomial (  [])) (_) = zero
+	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
+
+	degree (Polynomial []) = 0
+	degree (Polynomial cs) = (length cs) - 1
+
+	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
+instance PolynomialOps Perplex where
 	evaluate (Polynomial (  [])) (_) = zero
 	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
 
@@ -290,17 +311,19 @@ type DwellAlgorithm a = ETF a -> Ring2DArray a -> DwellArray
 
 
 
-compute_dwell_mandelbrot :: (Ring a, Geom2D a) => DwellFunction a
+compute_dwell_mandelbrot :: forall a. (Geom2D a, PolynomialOps a) => DwellFunction a
 compute_dwell_mandelbrot (etf) (z) =
 	let lim  = radius_sqrd etf in
 	let
+		coefs :: [a]
 		coefs =
 			case iter_poly etf of
 			Polynomial (  []) -> [z, from_1d 0.0, from_1d 2.0]
 			Polynomial (_:cs) -> cs
 	in
 	let z0 = zero in
-	let poly = Polynomial (z : coefs) in
+	let poly:: Polynomial a; poly = Polynomial (z : coefs) in
+	let eval_poly :: a -> a; eval_poly = evaluate (poly) in
 	let
 		iterate_dwell :: a -> Dwell -> Dwell
 		iterate_dwell (z_n) (dwell) =
@@ -308,7 +331,7 @@ compute_dwell_mandelbrot (etf) (z) =
 				then
 					g_max_dwell
 				else
-					let z_np1 = evaluate (poly) (z_n) in
+					let z_np1 = eval_poly (z_n) in
 					let qnorm = quad z_np1 in
 					if qnorm > lim
 						then dwell
@@ -318,7 +341,7 @@ compute_dwell_mandelbrot (etf) (z) =
 	result
 
 
-get_dwell_function ::  (Ring a, Geom2D a) => DwellProtocol -> DwellFunction a
+get_dwell_function ::  (Geom2D a, PolynomialOps a) => DwellProtocol -> DwellFunction a
 get_dwell_function (proto) =
 	case proto of
 		Julia       -> compute_dwell_mandelbrot --julia
