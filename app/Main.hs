@@ -72,7 +72,7 @@ class Geom2D a where
 	mod     :: a -> GFloat
 	arg     :: a -> GFloat
 	from_1d :: GFloat -> a  -- for scaling, goes to real part
-	to_2d   :: a -> Point2D
+	into_2d :: a -> Point2D
 	from_2d :: Point2D -> a
 
 class (Ring a, Geom2D a) => Ring2D a
@@ -88,6 +88,20 @@ data DPolar   = DPolar   { dm :: GFloat, dh :: GFloat } -- meaningful with e^(a+
 data PPolar   = PPolar   { pm :: GFloat, ph :: GFloat }
 -- data Tropical
 -- data Average
+
+
+instance Eq Pairwise where
+	(==) a b = xx a == xx b && yy a == yy b
+	(/=) a b = xx a /= xx b || yy a /= yy b
+instance Eq Complex where
+	(==) a b = cr a == cr b && ci a == ci b
+	(/=) a b = cr a /= cr b || ci a /= ci b
+instance Eq Dual where
+	(==) a b = dr a == dr b && de a == de b
+	(/=) a b = dr a /= dr b || de a /= de b
+instance Eq Perplex where
+	(==) a b = pr a == pr b && pj a == pj b
+	(/=) a b = pr a /= pr b || pj a /= pj b
 
 instance Ring Pairwise where
 	zero     = Pairwise { xx = 0.0,             yy = 0.0             }
@@ -151,7 +165,7 @@ instance Geom2D Pairwise where
 	arg  a   = atan2 (yy a) (xx a)
 
 	from_1d x = Pairwise { xx = x, yy = 0.0 }
-	to_2d   a = (xx a, yy a)
+	into_2d a = (xx a, yy a)
 	from_2d p = Pairwise { xx = (fst p), yy = (snd p) }
 instance Geom2D Complex where
 	conj a = Complex { cr = (cr a), ci = -(ci a)}
@@ -164,7 +178,7 @@ instance Geom2D Complex where
 	arg  a   = atan2 (ci a) (cr a)
 
 	from_1d x = Complex { cr = x, ci = 0.0 }
-	to_2d   a = (cr a, ci a)
+	into_2d a = (cr a, ci a)
 	from_2d p = Complex { cr = (fst p), ci = (snd p) }
 instance Geom2D Dual where
 	conj a = Dual { dr = (dr a), de = -(de a)}
@@ -177,7 +191,7 @@ instance Geom2D Dual where
 	arg  a   = (de a) / (dr a)
 
 	from_1d x = Dual { dr = x, de = 0.0 }
-	to_2d   a = (dr a, de a)
+	into_2d a = (dr a, de a)
 	from_2d p = Dual { dr = (fst p), de = (snd p) }
 instance Geom2D Perplex where
 	conj a = Perplex { pr = (pr a), pj = -(pj a)}
@@ -190,7 +204,7 @@ instance Geom2D Perplex where
 	arg  a   = atanh ((pj a) / (pr a))
 
 	from_1d x = Perplex { pr = x, pj = 0.0 }
-	to_2d   a = (pr a, pj a)
+	into_2d a = (pr a, pj a)
 	from_2d p = Perplex { pr = (fst p), pj = (snd p) }
 
 
@@ -198,9 +212,9 @@ instance Geom2D Perplex where
 newtype Polynomial a = Polynomial [a] deriving (Show, Eq)
 
 class (Ring a, Eq a) => PolynomialOps a where
-    evaluate   :: Polynomial a -> a -> a
-    degree     :: Polynomial a -> Int
-    fix_degree :: Polynomial a -> Polynomial a
+	evaluate   :: Polynomial a -> a -> a
+	degree     :: Polynomial a -> Int
+	fix_degree :: Polynomial a -> Polynomial a
 
 
 add_poly :: Ring a => [a] -> [a] -> [a]
@@ -213,30 +227,30 @@ sub_poly (  []) (  ys) = map neg ys
 sub_poly (  xs) (  []) = xs
 sub_poly (x:xs) (y:ys) = (x -. y) : sub_poly (xs) (ys)
 
-mul_poly :: Ring a => [a] -> [a] -> [a]
+mul_poly :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
 mul_poly (   _) ([]) = []
 mul_poly (  []) ( _) = []
 mul_poly (x:xs) (ys) =
 	let convolution_term  = map (x *.) (ys)        in
-	let moved_convolution = 0 : mul_poly (xs) (ys) in 
+	let moved_convolution = from_1d 0.0 : mul_poly (xs) (ys) in 
 	add_poly (convolution_term) (moved_convolution)
 
-instance Ring a => Ring (Polynomial a) where
+instance (Ring a, Geom2D a) => Ring (Polynomial a) where
 	zero = Polynomial ([])
-	unit = Polynomial ([1.0])
+	unit = let i = from_1d 1.0 in Polynomial ([i])
 	neg  (Polynomial xs) = Polynomial (map neg xs)
 	(+.) (Polynomial xs) (Polynomial ys) = Polynomial (add_poly (xs) (ys))
 	(-.) (Polynomial xs) (Polynomial ys) = Polynomial (sub_poly (xs) (ys))
 	(*.) (Polynomial xs) (Polynomial ys) = Polynomial (mul_poly (xs) (ys))
 
-instance Ring a => PolynomialOps (Polynomial a) where
-    evaluate (Polynomial (  [])) (_) = zero
-    evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
+instance  (Ring a, Geom2D a) => PolynomialOps (Polynomial a) where
+	evaluate (Polynomial (  [])) (_) = zero
+	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
 
-    degree (Polynomial []) = 0
-    degree (Polynomial cs) = (length cs) - 1
+	degree (Polynomial []) = 0
+	degree (Polynomial cs) = (length cs) - 1
 
-    fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
+	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
 
 
 
@@ -268,18 +282,25 @@ data ETF a = ETF {
 	iter_poly      :: Polynomial a
 }
 
+
+-- TODO add constraint
 type DwellFunction  a = ETF a -> a -> Dwell
 type DwellAlgorithm a = ETF a -> Ring2DArray a -> DwellArray
 
 
 
 
-compute_dwell_mandelbrot :: DwellFunction a
+compute_dwell_mandelbrot :: (Ring a, Geom2D a) => DwellFunction a
 compute_dwell_mandelbrot (etf) (z) =
 	let lim  = radius_sqrd etf in
-	let Polynomial (_:coefs) = iter_poly etf in
+	let
+		coefs =
+			case iter_poly etf of
+			Polynomial (  []) -> [z, from_1d 0.0, from_1d 2.0]
+			Polynomial (_:cs) -> cs
+	in
 	let z0 = zero in
-	let poly = Polynomial (z:coefs) in
+	let poly = Polynomial (z : coefs) in
 	let
 		iterate_dwell :: a -> Dwell -> Dwell
 		iterate_dwell (z_n) (dwell) =
@@ -297,7 +318,7 @@ compute_dwell_mandelbrot (etf) (z) =
 	result
 
 
-get_dwell_function :: DwellProtocol -> DwellFunction a
+get_dwell_function ::  (Ring a, Geom2D a) => DwellProtocol -> DwellFunction a
 get_dwell_function (proto) =
 	case proto of
 		Julia       -> compute_dwell_mandelbrot --julia
@@ -411,6 +432,7 @@ transform_affine_2d
 		result
 
 get_geompoint_from_windowcoord ::
+	Geom2D a =>
 	(Point2D, Point2D) ->
 	(Point2D, Point2D) ->
 	(Int, Int) ->
@@ -421,6 +443,7 @@ get_geompoint_from_windowcoord (old_range) (new_range) (coordinates) =
 	from_2d result
 
 get_all_points ::
+	Geom2D a =>
 	(Int, Int) ->
 	(Point2D, Point2D) ->
 	(Point2D, Point2D) ->
@@ -440,7 +463,7 @@ map_colors (palette) (dwell_array) =
 	let pixel_array = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
 	pixel_array
 
-render_fractal :: RenderParams -> ETF a -> Picture
+render_fractal :: (Ring a, Geom2D a) => RenderParams -> ETF a -> Picture
 render_fractal (params) (etf) =
 	let dims  = window_dims (params) in
 	let win_w = fst dims in
@@ -451,8 +474,8 @@ render_fractal (params) (etf) =
 
 	let geom_anchor = anchor (etf) in
 	let geom_spread = spread (etf) in
-	let geom_topleft_ = to_2d (geom_anchor -. geom_spread) in
-	let geom_topright = to_2d (geom_anchor +. geom_spread) in
+	let geom_topleft_ = into_2d (geom_anchor -. geom_spread) in
+	let geom_topright = into_2d (geom_anchor +. geom_spread) in
 	let geom_range = (geom_topleft_, geom_topright) in
 
 	let point_array = get_all_points (dims) (wind_range) (geom_range) in
@@ -485,7 +508,7 @@ main =
 			spread         = from_2d (g_spread),
 			radius         = 2.0,
 			radius_sqrd    = 4.0,
-			iter_poly      = Polynomial ([0.0, 0.0, 2.0])
+			iter_poly      = Polynomial ([from_1d 0.0, from_1d 0.0, from_1d 2.0])
 		}
 	in
 	let 
