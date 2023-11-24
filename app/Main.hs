@@ -2,7 +2,10 @@
 
 module Main(main) where
 
+
 -- import Numeric.Algebra
+import Text.Printf
+import Debug.Trace
 import Graphics.Gloss
 -- import Data.Colour.Palette
 
@@ -53,7 +56,7 @@ data Norm =
 	deriving (Eq, Enum, Show)
 -}
 
-class Eq a => Ring a where
+class (Show a, Eq a) => Ring a where
 	zero :: a
 	unit :: a
 	neg  :: a -> a
@@ -87,17 +90,21 @@ data PPolar   = PPolar   { pm :: GFloat, ph :: GFloat }
 -- data Tropical
 -- data Average
 
+instance Show Pairwise where show z = printf "Pairwise { xx: % 7.6f, : yy: % 7.6f }" (xx z) (yy z) 
+instance Show Complex  where show z = printf "Complex  { cr: % 7.6f, : ci: % 7.6f }" (cr z) (ci z) 
+instance Show Dual     where show z = printf "Dual     { dr: % 7.6f, : de: % 7.6f }" (dr z) (de z) 
+instance Show Perplex  where show z = printf "Perplex  { pr: % 7.6f, : pj: % 7.6f }" (pr z) (pj z) 
 
 instance Eq Pairwise where
 	(==) a b = xx a == xx b && yy a == yy b
 	(/=) a b = xx a /= xx b || yy a /= yy b
-instance Eq Complex where
+instance Eq Complex  where
 	(==) a b = cr a == cr b && ci a == ci b
 	(/=) a b = cr a /= cr b || ci a /= ci b
-instance Eq Dual where
+instance Eq Dual     where
 	(==) a b = dr a == dr b && de a == de b
 	(/=) a b = dr a /= dr b || de a /= de b
-instance Eq Perplex where
+instance Eq Perplex  where
 	(==) a b = pr a == pr b && pj a == pj b
 	(/=) a b = pr a /= pr b || pj a /= pj b
 
@@ -165,7 +172,7 @@ instance Geom2D Pairwise where
 	from_1d x = Pairwise { xx = x, yy = 0.0 }
 	into_2d a = (xx a, yy a)
 	from_2d p = Pairwise { xx = (fst p), yy = (snd p) }
-instance Geom2D Complex where
+instance Geom2D Complex  where
 	conj a = Complex { cr = (cr a), ci = -(ci a)}
 	getx   = cr
 	gety   = ci
@@ -178,7 +185,7 @@ instance Geom2D Complex where
 	from_1d x = Complex { cr = x, ci = 0.0 }
 	into_2d a = (cr a, ci a)
 	from_2d p = Complex { cr = (fst p), ci = (snd p) }
-instance Geom2D Dual where
+instance Geom2D Dual     where
 	conj a = Dual { dr = (dr a), de = -(de a)}
 	getx   = dr
 	gety   = de
@@ -191,7 +198,7 @@ instance Geom2D Dual where
 	from_1d x = Dual { dr = x, de = 0.0 }
 	into_2d a = (dr a, de a)
 	from_2d p = Dual { dr = (fst p), de = (snd p) }
-instance Geom2D Perplex where
+instance Geom2D Perplex  where
 	conj a = Perplex { pr = (pr a), pj = -(pj a)}
 	getx   = pr
 	gety   = pj
@@ -322,8 +329,8 @@ compute_dwell_mandelbrot (etf) (z) =
 			Polynomial (_:cs) -> cs
 	in
 	let z0 = zero in
-	let poly:: Polynomial a; poly = Polynomial (z : coefs) in
-	let eval_poly :: a -> a; eval_poly = evaluate (poly) in
+	let poly = trace (show z0) $ Polynomial (z : coefs) in
+	let eval_poly = evaluate (poly) in
 	let
 		iterate_dwell :: a -> Dwell -> Dwell
 		iterate_dwell (z_n) (dwell) =
