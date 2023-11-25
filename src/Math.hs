@@ -1,13 +1,16 @@
 module Math where
 
 import Text.Printf
+import GHC.Float
 
 {- Global config -}
 
 type GFloat  = Float -- Double
-type Geom    = Complex
+type Geom    = Perplex
 type Point2D = (GFloat, GFloat)
 
+toFrac :: Real a => a -> GFloat
+toFrac = realToFrac
 
 
 {- Math declarations -}
@@ -173,20 +176,20 @@ instance Geom2D Perplex  where
 	arg  a   = atanh ((pj a) / (pr a))
 
 instance Convert Pairwise where
-	from_1d x = Pairwise { xx = realToFrac x, yy = 0.0 }
-	from_2d p = Pairwise { xx = realToFrac (fst p), yy = realToFrac (snd p) }
+	from_1d x = Pairwise { xx = toFrac x, yy = 0.0 }
+	from_2d p = Pairwise { xx = toFrac (fst p), yy = toFrac (snd p) }
 	into_2d a = (xx a, yy a)
 instance Convert Complex  where
-	from_1d x = Complex { cr = realToFrac x, ci = 0.0 }
-	from_2d p = Complex { cr = realToFrac (fst p), ci = realToFrac (snd p) }
+	from_1d x = Complex { cr = toFrac x, ci = 0.0 }
+	from_2d p = Complex { cr = toFrac (fst p), ci = toFrac (snd p) }
 	into_2d a = (cr a, ci a)
 instance Convert Dual     where
-	from_1d x = Dual { dr = realToFrac x, de = 0.0 }
-	from_2d p = Dual { dr = realToFrac (fst p), de = realToFrac (snd p) }
+	from_1d x = Dual { dr = toFrac x, de = 0.0 }
+	from_2d p = Dual { dr = toFrac (fst p), de = toFrac (snd p) }
 	into_2d a = (dr a, de a)
 instance Convert Perplex  where
-	from_1d x = Perplex { pr = realToFrac x, pj = 0.0 }
-	from_2d p = Perplex { pr = realToFrac (fst p), pj = realToFrac (snd p) }
+	from_1d x = Perplex { pr = toFrac x, pj = 0.0 }
+	from_2d p = Perplex { pr = toFrac (fst p), pj = toFrac (snd p) }
 	into_2d a = (pr a, pj a)
 
 
@@ -219,7 +222,7 @@ mul_poly_arr (   _) ([]) = []
 mul_poly_arr (  []) ( _) = []
 mul_poly_arr (x:xs) (ys) =
 	let convolution_term  = map (x *.) (ys)        in
-	let moved_convolution = from_1d 0.0 : mul_poly_arr (xs) (ys) in
+	let moved_convolution = from_1d 0 : mul_poly_arr (xs) (ys) in
 	add_poly_arr (convolution_term) (moved_convolution)
 
 mul_poly ::  (Ring a, Geom2D a, Convert a) => Polynomial a -> Polynomial a -> Polynomial a
@@ -227,7 +230,7 @@ mul_poly (Polynomial ps) (Polynomial qs) = Polynomial (mul_poly_arr ps qs)
 
 instance (Ring a, Geom2D a, Convert a) => Ring (Polynomial a) where
 	zero = Polynomial ([])
-	unit = let i = from_1d 1.0 in Polynomial ([i])
+	unit = let i = from_1d 1 in Polynomial ([i])
 	neg  (Polynomial xs) = Polynomial (map neg xs)
 	(+.) = add_poly
 	(-.) = sub_poly

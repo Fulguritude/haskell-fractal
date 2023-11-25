@@ -98,7 +98,7 @@ compute_dwell_mandelbrot (etf) (z) =
 				else
 					let z_np1 = eval_poly (z_n) in
 					let qnorm = quad z_np1 in
-					if qnorm > lim
+					if qnorm > lim || qnorm < -lim -- TODO add escape condition to Geom2D class to avoid double comparison ? 
 						then dwell
 						else iterate_dwell (z_np1) (dwell + 1)
 	in
