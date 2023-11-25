@@ -189,6 +189,8 @@ instance Convert Perplex  where
 	from_2d p = Perplex { pr = (fst p), pj = (snd p) }
 	into_2d a = (pr a, pj a)
 
+
+
 newtype Polynomial a = Polynomial [a] deriving (Show, Eq)
 
 class (Ring a) => PolynomialOps a where
@@ -196,31 +198,40 @@ class (Ring a) => PolynomialOps a where
 	degree     :: Polynomial a -> Int
 	fix_degree :: Polynomial a -> Polynomial a
 
-add_poly :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
-add_poly (  []) (  ys) = ys
-add_poly (  xs) (  []) = xs
-add_poly (x:xs) (y:ys) = (x +. y) : add_poly (xs) (ys)
+add_poly_arr :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
+add_poly_arr (  []) (  ys) = ys
+add_poly_arr (  xs) (  []) = xs
+add_poly_arr (x:xs) (y:ys) = (x +. y) : add_poly_arr (xs) (ys)
 
-sub_poly :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
-sub_poly (  []) (  ys) = map neg ys
-sub_poly (  xs) (  []) = xs
-sub_poly (x:xs) (y:ys) = (x -. y) : sub_poly (xs) (ys)
+add_poly ::  (Ring a, Geom2D a) => Polynomial a -> Polynomial a -> Polynomial a
+add_poly (Polynomial ps) (Polynomial qs) = Polynomial (add_poly_arr ps qs)
 
-mul_poly :: (Ring a, Geom2D a, Convert a) => [a] -> [a] -> [a]
-mul_poly (   _) ([]) = []
-mul_poly (  []) ( _) = []
-mul_poly (x:xs) (ys) =
+sub_poly_arr :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
+sub_poly_arr (  []) (  ys) = map neg ys
+sub_poly_arr (  xs) (  []) = xs
+sub_poly_arr (x:xs) (y:ys) = (x -. y) : sub_poly_arr (xs) (ys)
+
+sub_poly ::  (Ring a, Geom2D a) => Polynomial a -> Polynomial a -> Polynomial a
+sub_poly (Polynomial ps) (Polynomial qs) = Polynomial (sub_poly_arr ps qs)
+
+mul_poly_arr :: (Ring a, Geom2D a, Convert a) => [a] -> [a] -> [a]
+mul_poly_arr (   _) ([]) = []
+mul_poly_arr (  []) ( _) = []
+mul_poly_arr (x:xs) (ys) =
 	let convolution_term  = map (x *.) (ys)        in
-	let moved_convolution = from_1d 0.0 : mul_poly (xs) (ys) in 
-	add_poly (convolution_term) (moved_convolution)
+	let moved_convolution = from_1d 0.0 : mul_poly_arr (xs) (ys) in
+	add_poly_arr (convolution_term) (moved_convolution)
+
+mul_poly ::  (Ring a, Geom2D a, Convert a) => Polynomial a -> Polynomial a -> Polynomial a
+mul_poly (Polynomial ps) (Polynomial qs) = Polynomial (mul_poly_arr ps qs)
 
 instance (Ring a, Geom2D a, Convert a) => Ring (Polynomial a) where
 	zero = Polynomial ([])
 	unit = let i = from_1d 1.0 in Polynomial ([i])
 	neg  (Polynomial xs) = Polynomial (map neg xs)
-	(+.) (Polynomial xs) (Polynomial ys) = Polynomial (add_poly (xs) (ys))
-	(-.) (Polynomial xs) (Polynomial ys) = Polynomial (sub_poly (xs) (ys))
-	(*.) (Polynomial xs) (Polynomial ys) = Polynomial (mul_poly (xs) (ys))
+	(+.) = add_poly
+	(-.) = sub_poly
+	(*.) = mul_poly
 
 instance (Convert a) => ConvertPoly (Polynomial a) where
 	from_1ds xs = Polynomial (map from_1d xs)
@@ -231,35 +242,19 @@ instance (Convert a) => ConvertPoly (Polynomial a) where
 			Polynomial (z:zs) -> into_2d (z) : into_2ds (Polynomial (zs))
 
 
-instance PolynomialOps Pairwise where
-	evaluate (Polynomial (  [])) (_) = zero
-	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
 
-	degree (Polynomial []) = 0
-	degree (Polynomial cs) = (length cs) - 1
+g_evaluate   :: Ring a => a -> Polynomial a -> a -> a
+g_evaluate z0 (Polynomial (  [])) (_) = z0
+g_evaluate z0 (Polynomial (c:cs)) (z) = c +. (z *. g_evaluate (z0) (Polynomial cs) (z))
 
-	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
-instance PolynomialOps Dual     where
-	evaluate (Polynomial (  [])) (_) = zero
-	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
+g_degree     :: Polynomial a -> Int
+g_degree (Polynomial []) = 0
+g_degree (Polynomial cs) = (length cs) - 1
 
-	degree (Polynomial []) = 0
-	degree (Polynomial cs) = (length cs) - 1
+g_fix_degree :: Ring a => a -> Polynomial a -> Polynomial a
+g_fix_degree (z0) (Polynomial cs) = Polynomial (reverse (dropWhile (== z0) (reverse cs)))
 
-	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
-instance PolynomialOps Complex  where
-	evaluate (Polynomial (  [])) (_) = zero
-	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
-
-	degree (Polynomial []) = 0
-	degree (Polynomial cs) = (length cs) - 1
-
-	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
-instance PolynomialOps Perplex  where
-	evaluate (Polynomial (  [])) (_) = zero
-	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
-
-	degree (Polynomial []) = 0
-	degree (Polynomial cs) = (length cs) - 1
-
-	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
+instance PolynomialOps Pairwise where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
+instance PolynomialOps Dual     where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
+instance PolynomialOps Complex  where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
+instance PolynomialOps Perplex  where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero

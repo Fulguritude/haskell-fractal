@@ -2,7 +2,7 @@
 
 module Render where
 
-import Debug.Trace
+-- import Debug.Trace
 import Graphics.Gloss
 -- import Data.Colour.Palette
 
@@ -124,9 +124,9 @@ get_all_points (wind_dims) (old_range) (new_range) =
 	result
 
 map_colors :: Palette -> DwellArray -> PixelArray
-map_colors (palette) (dwell_array) =
+map_colors (palette_array) (dwell_array) =
 	let dwell_matrix = dwells dwell_array in
-	let pixel_matrix = (map.map) (palette !!) (dwell_matrix) in
+	let pixel_matrix = (map.map) (palette_array !!) (dwell_matrix) in
 	let pixel_array = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
 	pixel_array
 
