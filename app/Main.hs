@@ -30,7 +30,7 @@ g_anchor, g_spread :: Point2D
 g_geom_w = 2.0
 g_geom_h = 2.0
 g_anchor = (0.0, 0.0)
-g_spread = (g_geom_w, g_geom_h) -- absolute spread in manhattan absolute distance from the anchor
+g_spread = (g_geom_w, g_geom_h) -- absolute spread in supremum absolute distance from the anchor
 
 g_protocol :: DwellProtocol
 g_protocol = Mandelbrot
@@ -72,13 +72,27 @@ class Geom2D a where
 	quad    :: a -> GFloat
 	mod     :: a -> GFloat
 	arg     :: a -> GFloat
-	from_1d :: GFloat -> a  -- for scaling, goes to real part
-	into_2d :: a -> Point2D
-	from_2d :: Point2D -> a
 
-class (Ring a, Geom2D a) => Ring2D a
--- data Ring2D a = (Ring a, Geom2D a) => Ring2D a
--- class Ring2D a where deriving (Ring a, Geom2D a) 
+
+{-
+class ConvertGen f1 f2 a where
+	from_1d :: f1 -> a  -- for scaling, goes to real part
+	into_2d :: a -> f2
+	from_2d :: f2 -> a
+class ConvertGen  GFloat   Point2D  a => Convert a
+class ConvertGen [GFloat] [Point2D] a => ConvertPoly a
+-}
+
+class Convert a where
+	from_1d :: GFloat  -> a  -- for scaling, goes to real part
+	from_2d :: Point2D -> a
+	into_2d :: a -> Point2D
+class ConvertPoly a where
+	from_1ds :: [GFloat ] -> a  -- for scaling, goes to real part
+	from_2ds :: [Point2D] -> a
+	into_2ds :: a -> [Point2D]
+
+class (Ring a, Geom2D a, Convert a) => Ring2D a
 
 data Pairwise = Pairwise { xx :: GFloat, yy :: GFloat }
 data Complex  = Complex  { cr :: GFloat, ci :: GFloat }
@@ -160,59 +174,54 @@ instance Ring2D CPolar   where
 -}
 
 instance Geom2D Pairwise where
-	conj a = Pairwise { xx = (xx a), yy = -(yy a)}
-	getx   = xx
-	gety   = yy
-
+	conj a   = Pairwise { xx = (xx a), yy = -(yy a)}
+	getx     = xx
+	gety     = yy
 	dot  a b = xx a * xx b + yy a * yy b
 	quad a   = dot (a) (a)
 	mod  a   = sqrt (quad a)
 	arg  a   = atan2 (yy a) (xx a)
-
-	from_1d x = Pairwise { xx = x, yy = 0.0 }
-	into_2d a = (xx a, yy a)
-	from_2d p = Pairwise { xx = (fst p), yy = (snd p) }
 instance Geom2D Complex  where
-	conj a = Complex { cr = (cr a), ci = -(ci a)}
-	getx   = cr
-	gety   = ci
-
+	conj a   = Complex { cr = (cr a), ci = -(ci a)}
+	getx     = cr
+	gety     = ci
 	dot  a b = cr a * cr b + ci a * ci b
 	quad a   = dot (a) (a)
 	mod  a   = sqrt (quad a)
 	arg  a   = atan2 (ci a) (cr a)
-
-	from_1d x = Complex { cr = x, ci = 0.0 }
-	into_2d a = (cr a, ci a)
-	from_2d p = Complex { cr = (fst p), ci = (snd p) }
 instance Geom2D Dual     where
-	conj a = Dual { dr = (dr a), de = -(de a)}
-	getx   = dr
-	gety   = de
-
+	conj a   = Dual { dr = (dr a), de = -(de a)}
+	getx     = dr
+	gety     = de
 	dot  a b = dr a * dr b
 	quad a   = dot (a) (a)
 	mod      = dr
 	arg  a   = (de a) / (dr a)
-
-	from_1d x = Dual { dr = x, de = 0.0 }
-	into_2d a = (dr a, de a)
-	from_2d p = Dual { dr = (fst p), de = (snd p) }
 instance Geom2D Perplex  where
-	conj a = Perplex { pr = (pr a), pj = -(pj a)}
-	getx   = pr
-	gety   = pj
-
+	conj a   = Perplex { pr = (pr a), pj = -(pj a)}
+	getx     = pr
+	gety     = pj
 	dot  a b = pr a * pr b - pj a * pj b
 	quad a   = dot (a) (a)
 	mod  a   = let qnorm = quad a in if qnorm >= 0.0 then sqrt(qnorm) else -sqrt(-qnorm)
 	arg  a   = atanh ((pj a) / (pr a))
 
+instance Convert Pairwise where
+	from_1d x = Pairwise { xx = x, yy = 0.0 }
+	from_2d p = Pairwise { xx = (fst p), yy = (snd p) }
+	into_2d a = (xx a, yy a)
+instance Convert Complex  where
+	from_1d x = Complex { cr = x, ci = 0.0 }
+	from_2d p = Complex { cr = (fst p), ci = (snd p) }
+	into_2d a = (cr a, ci a)
+instance Convert Dual     where
+	from_1d x = Dual { dr = x, de = 0.0 }
+	from_2d p = Dual { dr = (fst p), de = (snd p) }
+	into_2d a = (dr a, de a)
+instance Convert Perplex  where
 	from_1d x = Perplex { pr = x, pj = 0.0 }
-	into_2d a = (pr a, pj a)
 	from_2d p = Perplex { pr = (fst p), pj = (snd p) }
-
-
+	into_2d a = (pr a, pj a)
 
 newtype Polynomial a = Polynomial [a] deriving (Show, Eq)
 
@@ -231,7 +240,7 @@ sub_poly (  []) (  ys) = map neg ys
 sub_poly (  xs) (  []) = xs
 sub_poly (x:xs) (y:ys) = (x -. y) : sub_poly (xs) (ys)
 
-mul_poly :: (Ring a, Geom2D a) => [a] -> [a] -> [a]
+mul_poly :: (Ring a, Geom2D a, Convert a) => [a] -> [a] -> [a]
 mul_poly (   _) ([]) = []
 mul_poly (  []) ( _) = []
 mul_poly (x:xs) (ys) =
@@ -239,13 +248,22 @@ mul_poly (x:xs) (ys) =
 	let moved_convolution = from_1d 0.0 : mul_poly (xs) (ys) in 
 	add_poly (convolution_term) (moved_convolution)
 
-instance (Ring a, Geom2D a) => Ring (Polynomial a) where
+instance (Ring a, Geom2D a, Convert a) => Ring (Polynomial a) where
 	zero = Polynomial ([])
 	unit = let i = from_1d 1.0 in Polynomial ([i])
 	neg  (Polynomial xs) = Polynomial (map neg xs)
 	(+.) (Polynomial xs) (Polynomial ys) = Polynomial (add_poly (xs) (ys))
 	(-.) (Polynomial xs) (Polynomial ys) = Polynomial (sub_poly (xs) (ys))
 	(*.) (Polynomial xs) (Polynomial ys) = Polynomial (mul_poly (xs) (ys))
+
+instance (Convert a) => ConvertPoly (Polynomial a) where
+	from_1ds xs = Polynomial (map from_1d xs)
+	from_2ds zs = Polynomial (map from_2d zs)
+	into_2ds p  =
+		case p of
+			Polynomial (  []) -> []
+			Polynomial (z:zs) -> into_2d (z) : into_2ds (Polynomial (zs))
+
 
 instance PolynomialOps Pairwise where
 	evaluate (Polynomial (  [])) (_) = zero
@@ -255,7 +273,7 @@ instance PolynomialOps Pairwise where
 	degree (Polynomial cs) = (length cs) - 1
 
 	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
-instance PolynomialOps Dual where
+instance PolynomialOps Dual     where
 	evaluate (Polynomial (  [])) (_) = zero
 	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
 
@@ -263,7 +281,7 @@ instance PolynomialOps Dual where
 	degree (Polynomial cs) = (length cs) - 1
 
 	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
-instance PolynomialOps Complex where
+instance PolynomialOps Complex  where
 	evaluate (Polynomial (  [])) (_) = zero
 	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
 
@@ -271,7 +289,7 @@ instance PolynomialOps Complex where
 	degree (Polynomial cs) = (length cs) - 1
 
 	fix_degree (Polynomial cs) = Polynomial (reverse (dropWhile (== zero) (reverse cs)))
-instance PolynomialOps Perplex where
+instance PolynomialOps Perplex  where
 	evaluate (Polynomial (  [])) (_) = zero
 	evaluate (Polynomial (c:cs)) (z) = c +. (z *. evaluate (Polynomial cs) (z))
 
@@ -318,14 +336,14 @@ type DwellAlgorithm a = ETF a -> Ring2DArray a -> DwellArray
 
 
 
-compute_dwell_mandelbrot :: forall a. (Geom2D a, PolynomialOps a) => DwellFunction a
+compute_dwell_mandelbrot :: forall a. (Geom2D a, Convert a, PolynomialOps a) => DwellFunction a
 compute_dwell_mandelbrot (etf) (z) =
 	let lim  = radius_sqrd etf in
 	let
 		coefs :: [a]
 		coefs =
 			case iter_poly etf of
-			Polynomial (  []) -> [z, from_1d 0.0, from_1d 2.0]
+			Polynomial (  []) -> [z, zero, from_1d 2.0]
 			Polynomial (_:cs) -> cs
 	in
 	let z0 = zero in
@@ -348,7 +366,7 @@ compute_dwell_mandelbrot (etf) (z) =
 	result
 
 
-get_dwell_function ::  (Geom2D a, PolynomialOps a) => DwellProtocol -> DwellFunction a
+get_dwell_function ::  (Geom2D a, Convert a, PolynomialOps a) => DwellProtocol -> DwellFunction a
 get_dwell_function (proto) =
 	case proto of
 		Julia       -> compute_dwell_mandelbrot --julia
@@ -462,7 +480,7 @@ transform_affine_2d
 		result
 
 get_geompoint_from_windowcoord ::
-	Geom2D a =>
+	(Convert a) =>
 	(Point2D, Point2D) ->
 	(Point2D, Point2D) ->
 	(Int, Int) ->
@@ -473,7 +491,7 @@ get_geompoint_from_windowcoord (old_range) (new_range) (coordinates) =
 	from_2d result
 
 get_all_points ::
-	Geom2D a =>
+	(Convert a) =>
 	(Int, Int) ->
 	(Point2D, Point2D) ->
 	(Point2D, Point2D) ->
@@ -493,7 +511,7 @@ map_colors (palette) (dwell_array) =
 	let pixel_array = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
 	pixel_array
 
-render_fractal :: (Ring a, Geom2D a) => RenderParams -> ETF a -> Picture
+render_fractal :: (Ring a, Convert a) => RenderParams -> ETF a -> Picture
 render_fractal (params) (etf) =
 	let dims  = window_dims (params) in
 	let win_w = fst dims in
@@ -518,12 +536,16 @@ render_fractal (params) (etf) =
 main :: IO ()
 main =
 	let sc = 1.0 / fromIntegral(g_max_dwell) in
+	let conv x = fromIntegral(x) * sc in
 	let
 		render_params :: RenderParams
 		render_params = RenderParams {
 			window_dims = (g_canv_w, g_canv_h),
 			zoom        = 1.0,
-			palette     = [makeColor (fromIntegral(x)*sc) (fromIntegral(x)*sc) (fromIntegral(x)*sc) (255)  | x <- [ 0 .. g_max_dwell  ] ],
+			palette     = [
+				makeColor (conv(x)) (conv(x)) (conv(x)) (255)
+				| x <- [ 0 .. g_max_dwell  ]
+			],
 			is_static   = True
 		}
 	in
@@ -538,7 +560,7 @@ main =
 			spread         = from_2d (g_spread),
 			radius         = 2.0,
 			radius_sqrd    = 4.0,
-			iter_poly      = Polynomial ([from_1d 0.0, from_1d 0.0, from_1d 2.0])
+			iter_poly      = from_1ds [0.0, 0.0, 2.0]
 		}
 	in
 	let 
