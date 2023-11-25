@@ -50,12 +50,12 @@ class ConvertGen [GFloat] [Point2D] a => ConvertPoly a
 -}
 
 class Convert a where
-	from_1d :: GFloat  -> a  -- for scaling, goes to real part
-	from_2d :: Point2D -> a
+	from_1d :: (Real f) =>  f     -> a  -- for scaling, goes to real part
+	from_2d :: (Real f) => (f, f) -> a
 	into_2d :: a -> Point2D
 class ConvertPoly a where
-	from_1ds :: [GFloat ] -> a  -- for scaling, goes to real part
-	from_2ds :: [Point2D] -> a
+	from_1ds :: (Real f) => [ f    ] -> a  -- for scaling, goes to real part
+	from_2ds :: (Real f) => [(f, f)] -> a
 	into_2ds :: a -> [Point2D]
 
 class (Ring a, Geom2D a, Convert a) => Ring2D a
@@ -104,7 +104,7 @@ instance Ring Complex  where
 	(*.) a b =
 		Complex {
 			cr = (cr a) * (cr b) - (ci a) * (ci b),
-			ci = (cr a) * (ci b) + (cr a) * (ci b)
+			ci = (cr a) * (ci b) + (cr b) * (ci a)
 		}
 instance Ring Dual     where
 	zero     = Dual { dr = 0.0,             de = 0.0            }
@@ -115,7 +115,7 @@ instance Ring Dual     where
 	(*.) a b =
 		Dual {
 			dr = (dr a) * (dr b),
-			de = (dr a) * (de b) + (dr a) * (de b)
+			de = (dr a) * (de b) + (dr b) * (de a)
 		}
 instance Ring Perplex  where
 	zero     = Perplex { pr = 0.0,             pj = 0.0             }
@@ -126,7 +126,7 @@ instance Ring Perplex  where
 	(*.) a b =
 		Perplex {
 			pr = (pr a) * (pr b) + (pj a) * (pj b),
-			pj = (pr a) * (pj b) + (pr a) * (pj b)
+			pj = (pr a) * (pj b) + (pr b) * (pj a)
 		}
 {-
 instance Ring2D CPolar   where
@@ -173,20 +173,20 @@ instance Geom2D Perplex  where
 	arg  a   = atanh ((pj a) / (pr a))
 
 instance Convert Pairwise where
-	from_1d x = Pairwise { xx = x, yy = 0.0 }
-	from_2d p = Pairwise { xx = (fst p), yy = (snd p) }
+	from_1d x = Pairwise { xx = realToFrac x, yy = 0.0 }
+	from_2d p = Pairwise { xx = realToFrac (fst p), yy = realToFrac (snd p) }
 	into_2d a = (xx a, yy a)
 instance Convert Complex  where
-	from_1d x = Complex { cr = x, ci = 0.0 }
-	from_2d p = Complex { cr = (fst p), ci = (snd p) }
+	from_1d x = Complex { cr = realToFrac x, ci = 0.0 }
+	from_2d p = Complex { cr = realToFrac (fst p), ci = realToFrac (snd p) }
 	into_2d a = (cr a, ci a)
 instance Convert Dual     where
-	from_1d x = Dual { dr = x, de = 0.0 }
-	from_2d p = Dual { dr = (fst p), de = (snd p) }
+	from_1d x = Dual { dr = realToFrac x, de = 0.0 }
+	from_2d p = Dual { dr = realToFrac (fst p), de = realToFrac (snd p) }
 	into_2d a = (dr a, de a)
 instance Convert Perplex  where
-	from_1d x = Perplex { pr = x, pj = 0.0 }
-	from_2d p = Perplex { pr = (fst p), pj = (snd p) }
+	from_1d x = Perplex { pr = realToFrac x, pj = 0.0 }
+	from_2d p = Perplex { pr = realToFrac (fst p), pj = realToFrac (snd p) }
 	into_2d a = (pr a, pj a)
 
 
