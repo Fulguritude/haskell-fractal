@@ -3,7 +3,7 @@
 module ETF where
 
 
-import Debug.Trace
+-- import Debug.Trace
 
 import Math
 
@@ -87,7 +87,7 @@ compute_dwell_mandelbrot (etf) (z) =
 			Polynomial (_:cs) -> cs
 	in
 	let z0 = zero in
-	let poly = trace (show z0) $ Polynomial (z : coefs) in
+	let poly = Polynomial (z : coefs) in -- poly = trace (show z0) $ Polynomial (z : coefs) in
 	let eval_poly = evaluate (poly) in
 	let
 		iterate_dwell :: a -> Dwell -> Dwell

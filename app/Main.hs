@@ -38,7 +38,7 @@ main =
 			spread         = from_2d (g_spread),
 			radius         = 2.0,
 			radius_sqrd    = 4.0,
-			iter_poly      = from_1ds [0.0, 0.0, 2.0]
+			iter_poly      = from_1ds [0.0, 0.0, 0.0, 1.0]
 		}
 	in
 	let 

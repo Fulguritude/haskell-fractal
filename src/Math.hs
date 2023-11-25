@@ -1,12 +1,11 @@
 module Math where
 
 import Text.Printf
-import GHC.Float
 
 {- Global config -}
 
 type GFloat  = Float -- Double
-type Geom    = Perplex
+type Geom    = Pairwise
 type Point2D = (GFloat, GFloat)
 
 toFrac :: Real a => a -> GFloat
