@@ -52,8 +52,8 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    #dependencies:
-    #- haskell-fractal
+    dependencies:
+    - haskell-fractal
 
 tests:
   haskell-fractal-test:

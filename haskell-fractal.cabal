@@ -25,7 +25,9 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      ETF
+      Math
+      Render
   other-modules:
       Paths_haskell_fractal
   hs-source-dirs:
@@ -47,6 +49,7 @@ executable haskell-fractal-exe
   build-depends:
       base >=4.7 && <5
     , gloss ==1.13.*
+    , haskell-fractal
     , hspec
   default-language: Haskell2010
 
