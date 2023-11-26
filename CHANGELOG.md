@@ -2,6 +2,13 @@
 
 
 
+## 1.0.1.0 -- 2023-11-26
+
+Implemented a couple more algebras (which are sadly uninteresting).
+Implemented all old iteration protocols.
+Removed all warnings
+Prepared match-case for Mariani-Silver implementations.
+
 ## 1.0.0.0 -- 2023-11-25
 
 Implemented a bona fide fractal render.
