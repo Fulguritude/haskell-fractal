@@ -4,6 +4,7 @@ module Render (module Render) where
 
 -- import Debug.Trace
 import Graphics.Gloss
+import Data.Maybe
 -- import Data.Colour.Palette
 
 import ETF
@@ -106,7 +107,7 @@ get_geompoint_from_windowcoord (old_range) (new_range) (coordinates) =
 	let new_point = transform_affine_2d (old_range) (new_range) (old_point) in
 	let result = IterationData {
 		id_coord  = coordinates,
-		id_pos    = new_point,
+		id_pos    = from_2d new_point,
 		id_values = Nothing,
 		id_dwell  = Nothing
 	}
@@ -131,9 +132,10 @@ get_all_points (wind_dims) (old_range) (new_range) =
 
 map_colors :: Palette -> DwellArray a -> PixelArray
 map_colors (palette_array) (dwell_array) =
-	let dwell_matrix = dwells dwell_array in
-	let pixel_matrix = (map.map) (palette_array !!) (dwell_matrix) in
-	let pixel_array = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
+	let extract_dwell x = fromMaybe 0 (id_dwell x) in
+	let dwell_matrix    = (map.map) (extract_dwell) (dwells dwell_array) in
+	let pixel_matrix    = (map.map) (palette_array !!) (dwell_matrix) in
+	let pixel_array     = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
 	pixel_array
 
 
