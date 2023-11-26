@@ -33,7 +33,7 @@ g_parameter   = (2.0, 1.0)
 g_protocol :: DwellProtocol
 g_protocol = Burningship
 
-g_algorithm :: DwellChoiceAlgorithm
+g_algorithm :: DwellAlgorithmChoice
 g_algorithm = Naive
 
 g_max_dwell :: Dwell
@@ -70,6 +70,9 @@ main =
 			window_dims = (g_canv_w, g_canv_h),
 			zoom        = g_zoom,
 			palette     = g_palette,
+			show_axes   = True,
+			ms_calcs    = True,
+			hover_paths = True,
 			is_static   = True
 		}
 	in

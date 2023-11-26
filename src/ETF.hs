@@ -28,7 +28,7 @@ data DwellProtocol =
 	Duquesne
 	deriving (Eq, Enum, Show)
 
-data DwellChoiceAlgorithm =
+data DwellAlgorithmChoice =
 	Naive              |
 	MarianiSilverQuad  |
 	MarianiSilverPoint
@@ -37,7 +37,7 @@ data DwellChoiceAlgorithm =
 data ETF a = ETF {
 	r2algebra      :: R2Algebra,
 	protocol       :: DwellProtocol,
-	algorithm      :: DwellChoiceAlgorithm,
+	algorithm      :: DwellAlgorithmChoice,
 	max_dwell      :: Dwell,
 	compute_dwell  :: DwellFunction a,
 	compute_dwells :: DwellAlgorithm a,
@@ -50,6 +50,13 @@ data ETF a = ETF {
 	iter_poly      :: Polynomial a
 }
 
+data IterationData a = IterationData {
+	id_coord  :: (Int, Int),
+	id_pos    :: a,
+	id_values :: Maybe [a],
+	id_dwell  :: Maybe Dwell
+}
+
 
 data Ring2DArray a = Ring2DArray {
 	raw    :: Int,
@@ -57,15 +64,15 @@ data Ring2DArray a = Ring2DArray {
 	points :: [[a]]
 }
 
-data DwellArray = DwellArray {
+data DwellArray a = DwellArray {
 	daw    :: Int,
 	dah    :: Int,
-	dwells :: [[Int]]
+	dwells :: [[IterationData a]]
 }
 
 -- TODO add constraint
-type DwellFunction  a = ETF a -> a -> Dwell
-type DwellAlgorithm a = ETF a -> Ring2DArray a -> DwellArray
+type DwellFunction  a = ETF a -> (IterationData a) -> (IterationData a)
+type DwellAlgorithm a = ETF a -> Ring2DArray (IterationData a) -> DwellArray a
 
 
 
@@ -100,61 +107,81 @@ build_iterate_dwell ::
 	Dwell ->
 	(a -> a) ->
 	(GFloat -> Bool) ->
-	(a -> Dwell -> Dwell)
+	(a -> IterationData a -> IterationData a)
 build_iterate_dwell
 	(maxdwell)
 	(iterate_sequence)
 	(hasescaped)
 	=
 	let
-		iterate_dwell :: a -> Dwell -> Dwell
-		iterate_dwell (z_n) (dwell) =
+		iterate_dwell_rec :: a -> Dwell -> [a] -> (Dwell, [a])
+		iterate_dwell_rec (z_n) (dwell) (values) =
 			if dwell >= maxdwell
 				then
-					maxdwell
+					(maxdwell, z_n : values)
 				else
 					let z_np1 = iterate_sequence (z_n) in
 					let qnorm = quad z_np1 in
 					if hasescaped (qnorm)
-						then dwell
-						else iterate_dwell (z_np1) (dwell + 1)
+						then (dwell, z_np1 : values)
+						else iterate_dwell_rec (z_np1) (dwell + 1) (z_n : values)
+	in
+	let
+		iterate_dwell :: a -> IterationData a -> IterationData a
+		iterate_dwell (z0) (iter_data) =
+			let maybe_values = id_values iter_data in
+			case maybe_values of
+				Just _  -> iter_data
+				Nothing ->
+					let results = iterate_dwell_rec (z0) (0) ([]) in
+					let (dwell, values) = results in
+					let result = IterationData {
+						id_coord  = id_coord iter_data,
+						id_pos    = id_pos   iter_data,
+						id_values = Just values,
+						id_dwell  = Just dwell						
+					}
+					in
+					result
 	in
 	iterate_dwell
 
 
 
 compute_dwell_julia :: (Geom2D a, PolynomialOps a) => DwellFunction a
-compute_dwell_julia (etf) (z) =
+compute_dwell_julia (etf) (iter_data) =
 	let poly          = iter_poly etf in
 	let eval_poly     = evaluate (poly) in
 	let iterate_dwell = build_iterate_dwell (max_dwell etf) (eval_poly) (has_escaped etf) in
-	let result        = iterate_dwell (z) (0) in
+	let z0             = id_pos iter_data in
+	let result         = iterate_dwell (z0) (iter_data) in
 	result
 
 
 compute_dwell_mandelbrot :: (Convert a, Geom2D a, PolynomialOps a) => DwellFunction a
-compute_dwell_mandelbrot (etf) (z) =
-	let poly          = build_poly_mandelbrot (etf) (z) in
+compute_dwell_mandelbrot (etf) (iter_data) =
+	let poly          = build_poly_mandelbrot (etf) (id_pos iter_data) in
 	let eval_poly     = evaluate (poly) in
 	let iterate_dwell = build_iterate_dwell (max_dwell etf) (eval_poly) (has_escaped etf) in
 	let z0            = zero in
-	let result        = iterate_dwell (z0) (0) in
+	let result        = iterate_dwell (z0) (iter_data) in
 	result
 
 
 compute_dwell_pseudonewton :: (Convert a, Geom2D a, PolynomialOps a) => DwellFunction a
-compute_dwell_pseudonewton (etf) (z) =
+compute_dwell_pseudonewton (etf) (iter_data) =
 	let poly           = iter_poly etf in
 	let param          = from_1d (-1 :: GFloat) *. (parameter etf) in
 	let eval_poly (zz) = (param *. evaluate (poly) (zz)) +. zz in
 	let iterate_dwell  = build_iterate_dwell (max_dwell etf) (eval_poly) (has_escaped etf) in
-	let result         = iterate_dwell (z) (0) in
+	let z0             = id_pos iter_data in
+	let result         = iterate_dwell (z0) (iter_data) in
 	result
 
 
 compute_dwell_burningship :: (Convert a, Geom2D a, PolynomialOps a) => DwellFunction a
-compute_dwell_burningship (etf) (z) =
-	let poly           = build_poly_mandelbrot (etf) (z) in
+compute_dwell_burningship (etf) (iter_data) =
+	let poly           = build_poly_mandelbrot (etf) (id_pos iter_data) in
 	let
 		eval_poly (zz) =
 			let zz2    = into_2d (zz) in
@@ -164,11 +191,11 @@ compute_dwell_burningship (etf) (z) =
 	in
 	let iterate_dwell  = build_iterate_dwell (max_dwell etf) (eval_poly) (has_escaped etf) in
 	let z0             = zero in
-	let result         = iterate_dwell (z0) (0) in
+	let result         = iterate_dwell (z0) (iter_data) in
 	result
 
 compute_dwell_duquesne :: (Convert a, Geom2D a, PolynomialOps a) => DwellFunction a
-compute_dwell_duquesne (etf) (z) =
+compute_dwell_duquesne (etf) (iter_data) =
 	let poly          = iter_poly etf in
 	let
 		eval_poly (zz) =
@@ -180,7 +207,8 @@ compute_dwell_duquesne (etf) (z) =
 			result
 	in
 	let iterate_dwell = build_iterate_dwell (max_dwell etf) (eval_poly) (has_escaped etf) in
-	let result        = iterate_dwell (z) (0) in
+	let z0             = id_pos iter_data in
+	let result         = iterate_dwell (z0) (iter_data) in
 	result
 
 
@@ -197,7 +225,15 @@ get_dwell_function (proto) =
 
 
 
-get_iter_algorithm :: DwellChoiceAlgorithm -> DwellAlgorithm a
+-- data QuadTree a = Branch {
+-- 	qt_tl :: QuadTree a,
+-- 	qt_tr :: QuadTree a,
+-- 	qt_bl :: QuadTree a,
+-- 	qt_br :: QuadTree a
+-- } | Leaf a
+
+
+get_iter_algorithm :: forall a. DwellAlgorithmChoice -> DwellAlgorithm a
 get_iter_algorithm (algo) =
 	let
 		naive_alg :: DwellAlgorithm a
@@ -210,7 +246,14 @@ get_iter_algorithm (algo) =
 	let
 		ms_quad :: DwellAlgorithm a
 		ms_quad (etf) (point_array) =
-			let dwell_array = DwellArray { daw = raw point_array, dah = rah point_array, dwells =  [] } in
+			let
+				ms_quad_rec :: [IterationData a] -> Int -> [IterationData a]
+				ms_quad_rec (point_array) (depth) =
+					[]
+			in
+			let point_matrix = points point_array in
+			let dwell_matrix = [] in
+			let dwell_array = DwellArray { daw = raw point_array, dah = rah point_array, dwells =  dwell_matrix } in
 			dwell_array
 	in
 	let

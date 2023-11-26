@@ -17,10 +17,13 @@ import Math
 type Palette = [Color]
 
 data RenderParams = RenderParams {
-	window_dims   :: (Int, Int),
-	zoom          :: GFloat,
-	palette       :: Palette,
-	is_static     :: Bool
+	window_dims :: (Int, Int),
+	zoom        :: GFloat,
+	palette     :: Palette,
+	show_axes   :: Bool,
+	ms_calcs    :: Bool,
+	hover_paths :: Bool,
+	is_static   :: Bool
 }
 
 data PixelArray = PixelArray {
@@ -52,6 +55,8 @@ picture_from_pixelarray pixel_array =
 
 fromIntegral2D :: (Int, Int) -> Point2D
 fromIntegral2D (x, y) = (fromIntegral x, fromIntegral y)
+intoIntegral2D :: Point2D -> (Int, Int)
+intoIntegral2D (x, y) = (floor x, floor y)
 
 transform_affine_1d ::
 	Point2D ->
@@ -95,18 +100,26 @@ get_geompoint_from_windowcoord ::
 	(Point2D, Point2D) ->
 	(Point2D, Point2D) ->
 	(Int, Int) ->
-	a
+	IterationData a
 get_geompoint_from_windowcoord (old_range) (new_range) (coordinates) =
-	let point  = fromIntegral2D (coordinates) in
-	let result = transform_affine_2d (old_range) (new_range) (point) in
-	from_2d result
+	let old_point = fromIntegral2D (coordinates) in
+	let new_point = transform_affine_2d (old_range) (new_range) (old_point) in
+	let result = IterationData {
+		id_coord  = coordinates,
+		id_pos    = new_point,
+		id_values = Nothing,
+		id_dwell  = Nothing
+	}
+	in
+	result
+
 
 get_all_points ::
 	(Convert a) =>
 	(Int, Int) ->
 	(Point2D, Point2D) ->
 	(Point2D, Point2D) ->
-	Ring2DArray a
+	Ring2DArray (IterationData a)
 get_all_points (wind_dims) (old_range) (new_range) =
 	let (win_w, win_h) = wind_dims in
 	let get_geompoint  = get_geompoint_from_windowcoord (old_range) (new_range) in
@@ -115,12 +128,15 @@ get_all_points (wind_dims) (old_range) (new_range) =
 	let result         = Ring2DArray { raw = win_w, rah = win_h, points = point_matrix } in
 	result
 
-map_colors :: Palette -> DwellArray -> PixelArray
+
+map_colors :: Palette -> DwellArray a -> PixelArray
 map_colors (palette_array) (dwell_array) =
 	let dwell_matrix = dwells dwell_array in
 	let pixel_matrix = (map.map) (palette_array !!) (dwell_matrix) in
 	let pixel_array = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
 	pixel_array
+
+
 
 render_fractal :: (Ring a, Convert a) => RenderParams -> ETF a -> Picture
 render_fractal (params) (etf) =
@@ -131,11 +147,11 @@ render_fractal (params) (etf) =
 	let wind_topright = fromIntegral2D (win_w, win_h) in
 	let wind_range = (wind_topleft_, wind_topright) in
 
-	let geom_anchor = anchor (etf) in
-	let geom_spread = spread (etf) in
+	let geom_anchor   = anchor (etf) in
+	let geom_spread   = spread (etf) in
 	let geom_topleft_ = into_2d (geom_anchor -. geom_spread) in
 	let geom_topright = into_2d (geom_anchor +. geom_spread) in
-	let geom_range = (geom_topleft_, geom_topright) in
+	let geom_range    = (geom_topleft_, geom_topright) in
 
 	let point_array = get_all_points (dims) (wind_range) (geom_range) in
 	let dwell_array = (compute_dwells etf etf) (point_array) in
