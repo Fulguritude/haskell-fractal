@@ -1,4 +1,4 @@
-module Math where
+module Math (module Math) where
 
 import Text.Printf
 
@@ -12,6 +12,18 @@ toFrac = realToFrac
 
 
 {- Math declarations -}
+
+data R2Algebra =
+	R2A_Pairwise |
+	R2A_Complex  |
+	R2A_Dual     |
+	R2A_Perplex  |
+	R2A_Tropical |
+	R2A_Average  |
+	R2A_CPolar   |
+	R2A_DPolar   |
+	R2A_PPolar
+	deriving (Eq, Enum, Show)
 
 {-
 data Norm =
@@ -204,18 +216,18 @@ instance Geom2D Perplex  where
 	mod  a   = let qnorm = quad a in if qnorm >= 0.0 then sqrt(qnorm) else -sqrt(-qnorm)
 	arg  a   = atanh ((pj a) / (pr a))
 instance Geom2D Tropical where
-	conj a   = Tropical { tr = (tr a), ti = -(ti a)}
+	conj a   = Tropical { tr = (tr a), ti = -(ti a)}  -- not a conjugation
 	getx     = tr
 	gety     = ti
 	dot  a b = min (tr a + tr b) (ti a + ti b)
 	quad a   = dot (a) (a)
-	mod  a   = (quad a) / 2.0
+	mod  a   = (quad a) * 0.5
 	arg  a   = atan (ti a - tr a)  -- TODO think about this more
 instance Geom2D Average  where
 	conj a   = Average { ar = (ar a), ai = -(ai a)}
 	getx     = ar
 	gety     = ai
-	dot  a b = (sqrt (ar a * ar b) + sqrt (ai a * ai b)) / 2.0
+	dot  a b = (sqrt (ar a * ar b) + sqrt (ai a * ai b)) * 0.5
 	quad a   = dot (a) (a)
 	mod  _   = 0.0  -- probably meaningless
 	arg  _   = 0.0  -- probably meaningless

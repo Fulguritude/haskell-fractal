@@ -1,6 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Render where
+module Render (module Render) where
 
 -- import Debug.Trace
 import Graphics.Gloss

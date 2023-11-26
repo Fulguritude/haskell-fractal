@@ -13,21 +13,25 @@ import Render
 
 {- Global config -}
 
-type Geom = Tropical
+g_r2algebra :: R2Algebra
+g_r2algebra = R2A_Complex
+type Geom   =     Complex
 
 g_radius, g_radius_sqrd :: GFloat
 g_geom_w, g_geom_h      :: GFloat
 g_anchor, g_spread      :: Point2D
-g_geom_w      = 1.0
-g_geom_h      = 1.0
+g_parameter             :: Point2D
+g_geom_w      = 2.0
+g_geom_h      = 2.0
 g_anchor      = (0.0, 0.0)
 g_spread      = (g_geom_w, g_geom_h) -- absolute spread in supremum absolute distance from the anchor
-g_radius      = 0.000001
+g_radius      = 2.0
 g_radius_sqrd = g_radius * g_radius
+g_parameter   = (2.0, 1.0)
 
 
 g_protocol :: DwellProtocol
-g_protocol = Mandelbrot
+g_protocol = Burningship
 
 g_algorithm :: DwellChoiceAlgorithm
 g_algorithm = Naive
@@ -36,9 +40,7 @@ g_max_dwell :: Dwell
 g_max_dwell = 32
 
 g_iter_poly :: Polynomial (Geom)
-g_iter_poly = from_1ds ([0, 1, 2, 3] :: [GFloat])
-
-
+g_iter_poly = from_1ds ([0, 0, 2] :: [GFloat])
 
 g_canv_w, g_canv_h :: Int
 g_canv_w = 512
@@ -74,13 +76,16 @@ main =
 	let
 		etf :: ETF Geom
 		etf = ETF {
+			r2algebra      = g_r2algebra,
 			protocol       = g_protocol,
 			algorithm      = g_algorithm,
 			max_dwell      = g_max_dwell,
 			compute_dwell  = get_dwell_function (g_protocol),
 			compute_dwells = get_iter_algorithm (g_algorithm),
+			has_escaped    = build_has_escaped (g_radius_sqrd) (g_r2algebra),
 			anchor         = from_2d (g_anchor),
 			spread         = from_2d (g_spread),
+			parameter      = from_2d (g_parameter),
 			radius         = g_radius,
 			radius_sqrd    = g_radius_sqrd,
 			iter_poly      = g_iter_poly
