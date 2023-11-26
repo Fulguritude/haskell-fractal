@@ -8,24 +8,12 @@ module ETF where
 import Math
 
 
+
+
 {- Global config -}
+
 type Dwell   = Int   -- Word
 
-g_geom_w, g_geom_h :: GFloat
-g_anchor, g_spread :: Point2D
-g_geom_w = 2.0
-g_geom_h = 2.0
-g_anchor = (0.0, 0.0)
-g_spread = (g_geom_w, g_geom_h) -- absolute spread in supremum absolute distance from the anchor
-
-g_protocol :: DwellProtocol
-g_protocol = Mandelbrot
-
-g_algorithm :: DwellChoiceAlgorithm
-g_algorithm = Naive
-
-g_max_dwell :: Dwell
-g_max_dwell = 32
 
 
 
@@ -47,6 +35,7 @@ data DwellChoiceAlgorithm =
 data ETF a = ETF {
 	protocol       :: DwellProtocol,
 	algorithm      :: DwellChoiceAlgorithm,
+	max_dwell      :: Dwell,
 	compute_dwell  :: DwellFunction a,
 	compute_dwells :: DwellAlgorithm a,
 	anchor         :: a,
@@ -83,18 +72,19 @@ compute_dwell_mandelbrot (etf) (z) =
 		coefs :: [a]
 		coefs =
 			case iter_poly etf of
-			Polynomial (  []) -> [z, zero, from_1d 2.0]
+			Polynomial (  []) -> [z, zero, from_1d (2.0 :: GFloat)]
 			Polynomial (_:cs) -> cs
 	in
 	let z0 = zero in
 	let poly = Polynomial (z : coefs) in -- poly = trace (show z0) $ Polynomial (z : coefs) in
 	let eval_poly = evaluate (poly) in
+	let maxdwell = max_dwell etf in
 	let
 		iterate_dwell :: a -> Dwell -> Dwell
 		iterate_dwell (z_n) (dwell) =
-			if dwell >= g_max_dwell
+			if dwell >= maxdwell
 				then
-					g_max_dwell
+					maxdwell
 				else
 					let z_np1 = eval_poly (z_n) in
 					let qnorm = quad z_np1 in

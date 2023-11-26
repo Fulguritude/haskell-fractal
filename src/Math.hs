@@ -5,7 +5,6 @@ import Text.Printf
 {- Global config -}
 
 type GFloat  = Float -- Double
-type Geom    = Pairwise
 type Point2D = (GFloat, GFloat)
 
 toFrac :: Real a => a -> GFloat
@@ -62,20 +61,22 @@ class ConvertPoly a where
 
 class (Ring a, Geom2D a, Convert a) => Ring2D a
 
-data Pairwise = Pairwise { xx :: GFloat, yy :: GFloat }
+data Pairwise = Pairwise { xx :: GFloat, yy :: GFloat }  -- can also probably be used to study the mediant operator
 data Complex  = Complex  { cr :: GFloat, ci :: GFloat }
 data Dual     = Dual     { dr :: GFloat, de :: GFloat }
 data Perplex  = Perplex  { pr :: GFloat, pj :: GFloat }
+data Tropical = Tropical { tr :: GFloat, ti :: GFloat } -- semiring, min convention
+data Average  = Average  { ar :: GFloat, ai :: GFloat } -- not a ring but let's have fun
 data CPolar   = CPolar   { cm :: GFloat, ch :: GFloat }
-data DPolar   = DPolar   { dm :: GFloat, dh :: GFloat } -- meaningful with e^(a+b eps) = e^a + b (e^a) eps
+data DPolar   = DPolar   { dm :: GFloat, dh :: GFloat } -- meatingful with e^(a+b eps) = e^a + b (e^a) eps
 data PPolar   = PPolar   { pm :: GFloat, ph :: GFloat }
--- data Tropical
--- data Average
 
 instance Show Pairwise where show z = printf "Pairwise { xx: % 7.6f, : yy: % 7.6f }" (xx z) (yy z) 
 instance Show Complex  where show z = printf "Complex  { cr: % 7.6f, : ci: % 7.6f }" (cr z) (ci z) 
 instance Show Dual     where show z = printf "Dual     { dr: % 7.6f, : de: % 7.6f }" (dr z) (de z) 
 instance Show Perplex  where show z = printf "Perplex  { pr: % 7.6f, : pj: % 7.6f }" (pr z) (pj z) 
+instance Show Tropical where show z = printf "Tropical { tr: % 7.6f, : ti: % 7.6f }" (tr z) (ti z) 
+instance Show Average  where show z = printf "Average  { ar: % 7.6f, : ai: % 7.6f }" (ar z) (ai z) 
 
 instance Eq Pairwise where
 	(==) a b = xx a == xx b && yy a == yy b
@@ -89,6 +90,12 @@ instance Eq Dual     where
 instance Eq Perplex  where
 	(==) a b = pr a == pr b && pj a == pj b
 	(/=) a b = pr a /= pr b || pj a /= pj b
+instance Eq Tropical where
+	(==) a b = tr a == tr b && ti a == ti b
+	(/=) a b = tr a /= tr b || ti a /= ti b
+instance Eq Average  where
+	(==) a b = ar a == ar b && ai a == ai b
+	(/=) a b = ar a /= ar b || ai a /= ai b
 
 instance Ring Pairwise where
 	zero     = Pairwise { xx = 0.0,             yy = 0.0             }
@@ -98,22 +105,22 @@ instance Ring Pairwise where
 	(-.) a b = Pairwise { xx = (xx a) - (xx b), yy = (yy a) - (yy b) }
 	(*.) a b = Pairwise { xx = (xx a) * (xx b), yy = (yy a) * (yy b) }
 instance Ring Complex  where
-	zero     = Complex { cr = 0.0,             ci = 0.0            }
-	unit     = Complex { cr = 1.0,             ci = 0.0            }
-	neg  a   = Complex { cr = -(cr a),         ci = -(ci a)        }
-	(+.) a b = Complex { cr = (cr a) + (cr b), ci = (ci a) + (ci b)}
-	(-.) a b = Complex { cr = (cr a) - (cr b), ci = (ci a) - (ci b)}
+	zero     = Complex { cr = 0.0,             ci = 0.0             }
+	unit     = Complex { cr = 1.0,             ci = 0.0             }
+	neg  a   = Complex { cr = -(cr a),         ci = -(ci a)         }
+	(+.) a b = Complex { cr = (cr a) + (cr b), ci = (ci a) + (ci b) }
+	(-.) a b = Complex { cr = (cr a) - (cr b), ci = (ci a) - (ci b) }
 	(*.) a b =
 		Complex {
 			cr = (cr a) * (cr b) - (ci a) * (ci b),
 			ci = (cr a) * (ci b) + (cr b) * (ci a)
 		}
 instance Ring Dual     where
-	zero     = Dual { dr = 0.0,             de = 0.0            }
-	unit     = Dual { dr = 1.0,             de = 0.0            }
-	neg  a   = Dual { dr = -(dr a),         de = -(de a)        }
-	(+.) a b = Dual { dr = (dr a) + (dr b), de = (de a) + (de b)}
-	(-.) a b = Dual { dr = (dr a) - (dr b), de = (de a) - (de b)}
+	zero     = Dual { dr = 0.0,             de = 0.0             }
+	unit     = Dual { dr = 1.0,             de = 0.0             }
+	neg  a   = Dual { dr = -(dr a),         de = -(de a)         }
+	(+.) a b = Dual { dr = (dr a) + (dr b), de = (de a) + (de b) }
+	(-.) a b = Dual { dr = (dr a) - (dr b), de = (de a) - (de b) }
 	(*.) a b =
 		Dual {
 			dr = (dr a) * (dr b),
@@ -130,6 +137,29 @@ instance Ring Perplex  where
 			pr = (pr a) * (pr b) + (pj a) * (pj b),
 			pj = (pr a) * (pj b) + (pr b) * (pj a)
 		}
+instance Ring Tropical where
+	zero     = Tropical { tr = 1.0 / 0.0,         ti = 1.0 / 0.0         }
+	unit     = Tropical { tr = 0.0,               ti = 0.0               }
+	neg  a   = Tropical { tr = -(tr a),           ti = -(ti a)           }  -- not an opposite
+	(+.) a b = Tropical { tr = min (tr a) (tr b), ti = min (ti a) (ti b) }
+	(-.) a b = Tropical { tr = max (tr a) (tr b), ti = max (ti a) (ti b) }  -- not a subtraction
+	(*.) a b =
+		Tropical {
+			tr = (tr a) + (tr b),
+			ti = (ti a) + (ti b)
+		}
+instance Ring Average  where
+	zero     = Average { ar = 0.0,                     ai = 0.0                     } -- not a zero
+	unit     = Average { ar = 1.0,                     ai = 0.0                     } -- not a unit
+	neg  a   = Average { ar = -(ar a),                 ai = -(ai a)                 }
+	(+.) a b = Average { ar = ((ar a) + (ar b)) / 2.0, ai = ((ai a) + (ai b)) / 2.0 }
+	(-.) a b = Average { ar = ((ar a) - (ar b)) / 2.0, ai = ((ai a) - (ai b)) / 2.0 }
+	(*.) a b =
+		Average {
+			ar = sqrt ((ar a) * (ar b)),
+			ai = sqrt ((ai a) * (ai b))
+		}
+
 {-
 instance Ring2D CPolar   where
 	(+.) a b = CPolar   {md = (md a) * (md b), th = (th a) + (th b)}
@@ -173,6 +203,23 @@ instance Geom2D Perplex  where
 	quad a   = dot (a) (a)
 	mod  a   = let qnorm = quad a in if qnorm >= 0.0 then sqrt(qnorm) else -sqrt(-qnorm)
 	arg  a   = atanh ((pj a) / (pr a))
+instance Geom2D Tropical where
+	conj a   = Tropical { tr = (tr a), ti = -(ti a)}
+	getx     = tr
+	gety     = ti
+	dot  a b = min (tr a + tr b) (ti a + ti b)
+	quad a   = dot (a) (a)
+	mod  a   = (quad a) / 2.0
+	arg  a   = atan (ti a - tr a)  -- TODO think about this more
+instance Geom2D Average  where
+	conj a   = Average { ar = (ar a), ai = -(ai a)}
+	getx     = ar
+	gety     = ai
+	dot  a b = (sqrt (ar a * ar b) + sqrt (ai a * ai b)) / 2.0
+	quad a   = dot (a) (a)
+	mod  _   = 0.0  -- probably meaningless
+	arg  _   = 0.0  -- probably meaningless
+
 
 instance Convert Pairwise where
 	from_1d x = Pairwise { xx = toFrac x, yy = 0.0 }
@@ -190,7 +237,14 @@ instance Convert Perplex  where
 	from_1d x = Perplex { pr = toFrac x, pj = 0.0 }
 	from_2d p = Perplex { pr = toFrac (fst p), pj = toFrac (snd p) }
 	into_2d a = (pr a, pj a)
-
+instance Convert Tropical  where
+	from_1d x = Tropical { tr = toFrac x, ti = 0.0 }
+	from_2d p = Tropical { tr = toFrac (fst p), ti = toFrac (snd p) }
+	into_2d a = (tr a, ti a)
+instance Convert Average  where
+	from_1d x = Average { ar = toFrac x, ai = 0.0 }
+	from_2d p = Average { ar = toFrac (fst p), ai = toFrac (snd p) }
+	into_2d a = (ar a, ai a)
 
 
 newtype Polynomial a = Polynomial [a] deriving (Show, Eq)
@@ -221,7 +275,7 @@ mul_poly_arr (   _) ([]) = []
 mul_poly_arr (  []) ( _) = []
 mul_poly_arr (x:xs) (ys) =
 	let convolution_term  = map (x *.) (ys)        in
-	let moved_convolution = from_1d 0 : mul_poly_arr (xs) (ys) in
+	let moved_convolution = from_1d (0 :: GFloat) : mul_poly_arr (xs) (ys) in
 	add_poly_arr (convolution_term) (moved_convolution)
 
 mul_poly ::  (Ring a, Geom2D a, Convert a) => Polynomial a -> Polynomial a -> Polynomial a
@@ -229,7 +283,7 @@ mul_poly (Polynomial ps) (Polynomial qs) = Polynomial (mul_poly_arr ps qs)
 
 instance (Ring a, Geom2D a, Convert a) => Ring (Polynomial a) where
 	zero = Polynomial ([])
-	unit = let i = from_1d 1 in Polynomial ([i])
+	unit = let i = from_1d (1 :: GFloat) in Polynomial ([i])
 	neg  (Polynomial xs) = Polynomial (map neg xs)
 	(+.) = add_poly
 	(-.) = sub_poly
@@ -260,3 +314,5 @@ instance PolynomialOps Pairwise where evaluate = g_evaluate zero; degree = g_deg
 instance PolynomialOps Dual     where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
 instance PolynomialOps Complex  where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
 instance PolynomialOps Perplex  where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
+instance PolynomialOps Tropical where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
+instance PolynomialOps Average  where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero

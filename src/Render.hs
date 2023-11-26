@@ -11,14 +11,6 @@ import Math
 
 
 
-{- Global config -}
-
-g_canv_w, g_canv_h :: Int
-g_canv_w = 512
-g_canv_h = 512
-
-
-
 
 {- Render declarations -}
 
