@@ -3,12 +3,14 @@
 module Main (main) where
 
 
+
 -- import Numeric.Algebra
 import Graphics.Gloss
 
 import Math
 import ETF
 import Render
+
 
 
 {- Global config -}
@@ -31,10 +33,10 @@ g_parameter   = (2.0, 1.0)
 
 
 g_protocol :: DwellProtocol
-g_protocol = Burningship
+g_protocol = Mandelbrot
 
 g_algorithm :: DwellAlgorithmChoice
-g_algorithm = Naive
+g_algorithm = MarianiSilverQuad
 
 g_max_dwell :: Dwell
 g_max_dwell = 32
@@ -51,14 +53,12 @@ g_palette =
 	let sc = 1.0 / fromIntegral(g_max_dwell) in
 	let conv x = fromIntegral(x) * sc in
 	[
-		makeColor (conv(x)) (conv(x)) (conv(x)) (255)
+		let cx = conv(x) in makeColor (cx) (cx) (cx) (255)
 		| x <- [ 0 .. g_max_dwell  ]
 	]
 
 g_zoom :: GFloat
 g_zoom = 1.0
-
-
 
 
 

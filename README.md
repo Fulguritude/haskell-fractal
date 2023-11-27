@@ -6,11 +6,12 @@ The core of the exercise is to render various escape-time fractals with the foll
   - render a fractal image to a window (forces one to learn about available libraries, build systems, and some IO),
   - can work with multiple R²-algebras over arbitrary polynomials (forces a minimum of typed architecture, and gives fun renders),
   - can run various dwell protocols and various rendering algorithm (forces one to implement modular code),
+  - can zoom up to machine precision,
   - implements a version of the Mariana-Silver algorithm (to learn how to recurse in the language).
 
 It's a project that I've done:
   - in C (core done, with a lot of interactivity, but only for complex numbers),
-  - in React/TypeScript (core done, and even some amount of interactivity, though somewhat buggy),
+  - in React/TypeScript (core done, and even some amount of interactivity, though somewhat buggy and not too UX-friendly),
   - in Rust (only a rudimentary implementation, didn't have much time),
   - and now in Haskell (for now, only steps 1 and 2 of the core are done).
 
