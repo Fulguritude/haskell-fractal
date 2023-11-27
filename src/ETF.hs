@@ -8,7 +8,7 @@ import System.Exit
 
 import Math
 import Data.Bifunctor
-import Data.List ( sortBy )
+import Data.List ( sortBy, unionBy )  --, nubBy )
 import Data.Maybe
 
 
@@ -62,7 +62,7 @@ data IterationData a = IterationData {
 	id_depth  :: Maybe Int,
 	id_calced :: Maybe Bool,
 	id_dwell  :: Maybe Dwell
-}
+} deriving (Show)
 
 
 data Ring2DArray a = Ring2DArray {
@@ -138,8 +138,8 @@ build_iterate_dwell
 	let
 		iterate_dwell :: a -> IterationData a -> IterationData a
 		iterate_dwell (z0) (iter_data) =
-			let maybe_values = id_values iter_data in
-			case maybe_values of
+			let maybe_calced = id_calced iter_data in
+			case maybe_calced of
 				Just _  -> iter_data
 				Nothing ->
 					let results = iterate_dwell_rec (z0) (0) ([]) in
@@ -280,12 +280,14 @@ ms_get_subquad_bounds (anch) (size) =
 	let h_half        = h_size_half + h_size_parity in
 	let w_even_offset = 1 - w_size_parity in
 	let h_even_offset = 1 - h_size_parity in
-	let w_mid_anchor  = fst anch + w_half - w_even_offset in
-	let h_mid_anchor  = snd anch + h_half - h_even_offset in
+	let w_ini_anchor  = fst anch in
+	let h_ini_anchor  = snd anch in
+	let w_mid_anchor  = w_ini_anchor + w_size_half - w_even_offset in
+	let h_mid_anchor  = h_ini_anchor + h_size_half - h_even_offset in
 
-	let anch_top_l = ( fst anch               , snd anch               ) in
-	let anch_top_r = ( w_mid_anchor           , snd anch               ) in
-	let anch_bot_l = ( fst anch               , h_mid_anchor           ) in
+	let anch_top_l = ( w_ini_anchor           , h_ini_anchor           ) in
+	let anch_top_r = ( w_mid_anchor           , h_ini_anchor           ) in
+	let anch_bot_l = ( w_ini_anchor           , h_mid_anchor           ) in
 	let anch_bot_r = ( w_mid_anchor           , h_mid_anchor           ) in
 	let size_top_l = ( w_half                 , h_half                 ) in
 	let size_top_r = ( w_half + w_even_offset , h_half                 ) in
@@ -318,7 +320,7 @@ fill_iteration_data (dwell) (depth) (iteration_data) =
 	in
 	result
 
-ms_quad :: forall a. DwellAlgorithm a
+ms_quad :: forall a. (Show a) => DwellAlgorithm a
 ms_quad (etf) (points_data) =
 	let
 		build_filter_points ::
@@ -331,13 +333,13 @@ ms_quad (etf) (points_data) =
 			let (l, t) = anch in
 			let (w, h) = size in
 			let (r, b) = (l + w, t + h) in
-			let is_boundary (p) = let (x, y) = id_coord p in predicate x y t b l r in
+			let is_boundary (p) = let (x, y) = id_coord p in predicate x y t (b-1) l (r-1) in
 			let result = filter (is_boundary) (point_array) in
 			result
 	in
-	let filter_boundary_points = build_filter_points (\x y t b l r -> y == t || x == l || x == r || y == b) in
-	let filter_interior_points = build_filter_points (\x y t b l r -> y >  t || x >  l || x <  r || y <  b) in
-	let filter_enclosed_points = build_filter_points (\x y t b l r -> y >= t || x >= l || x <= r || y <= b) in
+	let filter_boundary_points = build_filter_points (\x y t b l r -> (y == t) || (x == l) || (x == r) || (y == b)) in
+	let filter_interior_points = build_filter_points (\x y t b l r -> (y >  t) && (x >  l) && (x <  r) && (y <  b)) in
+	let filter_enclosed_points = build_filter_points (\x y t b l r -> (y >= t) && (x >= l) && (x <= r) && (y <= b)) in
 	let
 		ms_quad_rec ::
 			[IterationData a] ->
@@ -353,17 +355,22 @@ ms_quad (etf) (points_data) =
 			(anch)
 			(size)
 			=
-			let boundary       = trace ("Anchor " ++ show anch ++ " | Size " ++ show size) $ filter_boundary_points (point_array) (anch) (size) in  -- TODO a one-pass optimization of boundary and interior
+			let boundary       = trace ("\n\nAnchor " ++ show anch ++ " | Size " ++ show size ++ " | Depth " ++ show depth) $ filter_boundary_points (point_array) (anch) (size) in  -- TODO a one-pass optimization of boundary and interior
 			let interior       = filter_interior_points (point_array) (anch) (size) in
-			let ms_figure      = fmap (compute_dwell etf etf) (boundary) in
+			let ms_figure      =
+				trace ("Boundary " ++ show (map id_coord boundary)) $
+				trace ("Interior " ++ show (map id_coord interior)) $
+				fmap (compute_dwell etf etf) (boundary) in
 			let fig_dwells     = fmap ((fromMaybe (-1)) . id_dwell) (ms_figure) in
 			let dwell : dwells = fig_dwells in
-			let should_fill    = all (== dwell) (dwells) in
+			let should_fill    = trace ("dwell " ++ show dwell ++ " | dwells " ++ show dwells) $ all (== dwell) (dwells) in
 			let result
 				| fst size <= 2 || snd size <= 2 =
+					trace ("end_ " ++ show (length boundary) ++ " + " ++ show (length interior) ++ " = " ++ show (length ms_figure)) $
 					ms_figure
 				| should_fill =
 					let filled_interior = fmap (fill_iteration_data (dwell) (depth)) (interior) in
+					trace ("fill " ++ show (length boundary) ++ " + " ++ show (length interior) ++ " = " ++ show (length (ms_figure ++ filled_interior))) $
 					ms_figure ++ filled_interior
 				| otherwise =
 					let updated_pointarray = ms_figure ++ interior in
@@ -388,13 +395,23 @@ ms_quad (etf) (points_data) =
 					let array_top_r = compute_quadrant (updated_pointarray) (anch_top_r) (size_top_r) in
 					let array_bot_l = compute_quadrant (updated_pointarray) (anch_bot_l) (size_bot_l) in
 					let array_bot_r = compute_quadrant (updated_pointarray) (anch_bot_r) (size_bot_r) in
-					array_top_l ++ array_top_r ++ array_bot_l ++ array_bot_r
+					-- let combined_array = foldl (unionBy (\p q -> id_coord p == id_coord q)) [] [array_top_l, array_top_r, array_bot_l, array_bot_r] in
+					let combined_array = concat [array_top_l, array_top_r, array_bot_l, array_bot_r] in
+					trace ("quad " ++
+						show (length boundary) ++ " + " ++
+						show (length interior) ++ " = " ++
+						show (length array_top_l) ++ " + " ++
+						show (length array_top_r) ++ " + " ++
+						show (length array_bot_l) ++ " + " ++
+						show (length array_bot_r) ++ " = " ++
+						show (length (combined_array))) $
+					combined_array
 			in
 			result
 	in
 	let Ring2DArray {raw = w, rah = h, points = point_matrix} = points_data in
 	let point_array   = concat (point_matrix) in
-	let calced_matrix = ms_quad_rec (point_array) (0) (0, 0) (w - 1, h - 1) in
+	let calced_matrix = ms_quad_rec (point_array) (0) (0, 0) (w, h) in
 	let
 		split_every _ [] = []
 		split_every (n) (list) =
@@ -405,21 +422,23 @@ ms_quad (etf) (points_data) =
 		lexsort a b =
 			let (xa, ya) = id_coord a in
 			let (xb, yb) = id_coord b in
-			if xa < xb
-				then LT
-			else if xa > xb
-				then GT
-			else if ya < yb
-				then LT
-				else GT
+			let result
+				| ya < yb   = LT
+				| ya > yb   = GT
+				| xa < xb   = LT
+				| xa > xb   = GT
+				| otherwise = EQ
+			in
+			result
 	in
 	let sorted_matrix = sortBy (lexsort) (calced_matrix) in
-	let dwell_matrix  = split_every (w) (sorted_matrix) in
+	--let nubbed_matrix = nubBy (\a b -> lexsort a b == EQ) (sorted_matrix) in
+	let dwell_matrix  = split_every (w) (sorted_matrix) in -- (nubbed_matrix) in
+	-- trace ("ms_result " ++ show dwell_matrix) $ 
 	let dwell_data = DwellArray { daw = w, dah = h, dwells = dwell_matrix } in
 	dwell_data
 
-
-get_iter_algorithm :: forall a. DwellAlgorithmChoice -> DwellAlgorithm a
+get_iter_algorithm :: forall a. (Show a) => DwellAlgorithmChoice -> DwellAlgorithm a
 get_iter_algorithm (algo) =
 	let
 		ms_point :: DwellAlgorithm a

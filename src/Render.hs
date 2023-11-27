@@ -127,8 +127,8 @@ get_all_points ::
 get_all_points (wind_dims) (old_range) (new_range) =
 	let (win_w, win_h) = wind_dims in
 	let get_geompoint  = get_geompoint_of_windowcoord (old_range) (new_range) in
-	let build_horz (y) = [ get_geompoint (x, y) | x <- [ 0 .. win_w ] ] in
-	let	point_matrix   = [ build_horz       (y) | y <- [ 0 .. win_h ] ] in
+	let build_horz (y) = [ get_geompoint (x, y) | x <- [ 0 .. win_w - 1 ] ] in
+	let	point_matrix   = [ build_horz       (y) | y <- [ 0 .. win_h - 1 ] ] in
 	let result         = Ring2DArray { raw = win_w, rah = win_h, points = point_matrix } in
 	result
 

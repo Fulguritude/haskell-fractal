@@ -39,14 +39,14 @@ g_algorithm :: DwellAlgorithmChoice
 g_algorithm = MarianiSilverQuad
 
 g_max_dwell :: Dwell
-g_max_dwell = 32
+g_max_dwell = 8
 
 g_iter_poly :: Polynomial (Geom)
 g_iter_poly = from_1ds ([0, 0, 2] :: [GFloat])
 
 g_canv_w, g_canv_h :: Int
-g_canv_w = 512
-g_canv_h = 512
+g_canv_w = 256
+g_canv_h = 256
 
 g_palette :: [Color]
 g_palette =
