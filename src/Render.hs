@@ -33,8 +33,8 @@ data PixelArray = PixelArray {
 	pixels :: [[Color]]
 }
 
-picture_from_pixelarray :: PixelArray -> Picture
-picture_from_pixelarray pixel_array =
+picture_of_pixelarray :: PixelArray -> Picture
+picture_of_pixelarray pixel_array =
 	let vert_offset = fromIntegral(pah pixel_array) / 2.0 in
 	let horz_offset = fromIntegral(paw pixel_array) / 2.0 in
 	let result      =
@@ -96,23 +96,26 @@ transform_affine_2d
 		let result = (new_x, new_y) in
 		result
 
-get_geompoint_from_windowcoord ::
+get_geompoint_of_windowcoord ::
 	(Convert a) =>
 	(Point2D, Point2D) ->
 	(Point2D, Point2D) ->
 	(Int, Int) ->
 	IterationData a
-get_geompoint_from_windowcoord (old_range) (new_range) (coordinates) =
+get_geompoint_of_windowcoord (old_range) (new_range) (coordinates) =
 	let old_point = fromIntegral2D (coordinates) in
 	let new_point = transform_affine_2d (old_range) (new_range) (old_point) in
 	let result = IterationData {
 		id_coord  = coordinates,
 		id_pos    = from_2d new_point,
 		id_values = Nothing,
+		id_depth  = Nothing,
+		id_calced = Nothing,
 		id_dwell  = Nothing
 	}
 	in
 	result
+
 
 
 get_all_points ::
@@ -123,10 +126,58 @@ get_all_points ::
 	Ring2DArray (IterationData a)
 get_all_points (wind_dims) (old_range) (new_range) =
 	let (win_w, win_h) = wind_dims in
-	let get_geompoint  = get_geompoint_from_windowcoord (old_range) (new_range) in
+	let get_geompoint  = get_geompoint_of_windowcoord (old_range) (new_range) in
 	let build_horz (y) = [ get_geompoint (x, y) | x <- [ 0 .. win_w ] ] in
 	let	point_matrix   = [ build_horz       (y) | y <- [ 0 .. win_h ] ] in
 	let result         = Ring2DArray { raw = win_w, rah = win_h, points = point_matrix } in
+	result
+
+
+
+-- source, MIT license: https://bottosson.github.io/posts/oklab/
+
+type RGB = Color
+type LAB = Color
+
+oklab_of_srgb :: RGB -> LAB 
+oklab_of_srgb (c) =
+	let (r, g, b, a) = rgbaOfColor c in
+	let l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b in
+	let m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b in
+	let s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b in
+
+	let l_ = cbrt(l) in
+	let m_ = cbrt(m) in
+	let s_ = cbrt(s) in
+
+	let result =
+		makeColor 
+			(0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_)
+			(1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_)
+			(0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_)
+			(a)
+	in
+	result
+
+srgb_of_oklab :: LAB -> RGB
+srgb_of_oklab (c) =
+	let (l, m, s, a) = rgbaOfColor c in
+
+	let r_ = l + 0.3963377774 * m + 0.2158037573 * s in
+	let g_ = l - 0.1055613458 * m - 0.0638541728 * s in
+	let b_ = l - 0.0894841775 * m - 1.2914855480 * s in
+
+	let r = r_ * r_ * r_ in
+	let g = g_ * g_ * g_ in
+	let b = b_ * b_ * b_ in
+
+	let result =
+		makeColor 
+			( 4.0767416621 * r - 3.3077115913 * g + 0.2309699292 * b)
+			(-1.2684380046 * r + 2.6097574011 * g - 0.3413193965 * b)
+			(-0.0041960863 * r - 0.7034186147 * g + 1.7076147010 * b)
+			(a)
+	in
 	result
 
 
@@ -158,5 +209,5 @@ render_fractal (params) (etf) =
 	let point_array = get_all_points (dims) (wind_range) (geom_range) in
 	let dwell_array = (compute_dwells etf etf) (point_array) in
 	let pixel_array = map_colors (palette params) (dwell_array) in
-	let result      = picture_from_pixelarray (pixel_array) in
+	let result      = picture_of_pixelarray (pixel_array) in
 	result

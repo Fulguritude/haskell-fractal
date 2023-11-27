@@ -328,3 +328,21 @@ instance PolynomialOps Complex  where evaluate = g_evaluate zero; degree = g_deg
 instance PolynomialOps Perplex  where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
 instance PolynomialOps Tropical where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
 instance PolynomialOps Average  where evaluate = g_evaluate zero; degree = g_degree; fix_degree = g_fix_degree zero
+
+
+-- adapted from https://www.tutorialspoint.com/haskell-program-to-calculate-the-cube-root-of-the-given-number
+
+g_precision :: GFloat
+g_precision = 0.00001
+
+cubeRootNewtonRaphson :: GFloat -> GFloat -> GFloat
+cubeRootNewtonRaphson (x) (guess) =
+	let guess2 = guess * guess  in
+	let guess3 = guess * guess2 in
+	if abs (guess3 - x) < g_precision
+		then guess
+		else cubeRootNewtonRaphson x (guess - (guess3 - x) / (3 * guess2))
+
+cbrt :: GFloat -> GFloat
+cbrt x = cubeRootNewtonRaphson x 1
+
