@@ -33,9 +33,19 @@ picture_of_pixelarray pixel_array =
 
 
 
-map_colors :: Palette -> DwellArray a -> PixelArray
-map_colors (palette_array) (dwell_array) =
+map_colors_naive :: Palette -> DwellArray a -> PixelArray
+map_colors_naive (palette_array) (dwell_array) =
 	let extract_dwell x = fromMaybe 0 (id_dwell x) in
+	let dwell_matrix    = (map.map) (extract_dwell) (dwells dwell_array) in
+	let pixel_matrix    = (map.map) (palette_array !!) (dwell_matrix) in
+	let pixel_array     = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
+	pixel_array
+
+
+map_colors_ms :: Dwell -> Palette -> DwellArray a -> PixelArray
+map_colors_ms (max_dwell) (palette_array) (dwell_array) =
+	-- todo : alternative palette for squares based on depth ?
+	let extract_dwell x = if fromMaybe (False) (id_calced x) then max_dwell - 1 else fromMaybe 0 (id_dwell x) in
 	let dwell_matrix    = (map.map) (extract_dwell) (dwells dwell_array) in
 	let pixel_matrix    = (map.map) (palette_array !!) (dwell_matrix) in
 	let pixel_array     = PixelArray { paw = daw dwell_array, pah = dah dwell_array, pixels = pixel_matrix } in
@@ -47,6 +57,7 @@ render_fractal :: (Ring a, Convert a) => RenderParams -> ETF a -> Picture
 render_fractal (params) (etf) =
 	let dims        = get_dwell_algorithm_dims (etf) (params) in
 	let dwell_array = (compute_dwells etf etf dims) in
+	let map_colors  = if algorithm etf == Naive then map_colors_naive else map_colors_ms (max_dwell etf) in
 	let pixel_array = map_colors (palette params) (dwell_array) in
 	let result      = picture_of_pixelarray (pixel_array) in
 	result

@@ -1,6 +1,11 @@
 # Revision history for hs-fractal
 
 
+## 1.0.2.0 -- 2023-12-01
+
+Greatly improved MS logic and performance.
+Did a big refactor to better divide the code and improve clarity.
+Implemented a default "see the debug squares" for MS to show that it works as expected.
 
 ## 1.0.1.0 -- 2023-11-26
 

@@ -13,7 +13,7 @@ It's a project that I've done:
   - in C (core done, with a lot of interactivity, but only for complex numbers),
   - in React/TypeScript (core done, and even some amount of interactivity, though somewhat buggy and not too UX-friendly),
   - in Rust (only a rudimentary implementation, didn't have much time),
-  - and now in Haskell (for now, only steps 1 and 2 of the core are done).
+  - and now in Haskell (for now, only steps 1, 2, 3 and 5 of the core are done).
 
 Depending on the amount of time that I have before needing to use the language professionally, I put more or less care/features into this project. Other features include:
   - saving to file (as a set of parameters, and/or as a picture), loading from file (set of parameters)
