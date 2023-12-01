@@ -2,6 +2,7 @@ module Main (main) where
 
 import Test.Hspec
 import Math
+import Config
 
 main :: IO ()
 main = hspec $ do

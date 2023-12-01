@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Colors
+      Config
       ETF_Algorithms
       ETF_Protocols
       ETF_Types
