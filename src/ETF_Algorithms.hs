@@ -374,10 +374,13 @@ ms_quad (etf) (dims) =
 	let
 		check_boundary :: IDCollection a -> (Dwell, Bool)
 		check_boundary (boundary) =
-			let fig_dwells     = fmap ((fromMaybe (-1)) . id_dwell) (boundary) in
-			let dwell : dwells = fig_dwells in
-			let should_fill    = all (== dwell) (dwells) in
-			(dwell, should_fill)
+			let fig_dwells = fmap ((fromMaybe (-1)) . id_dwell) (boundary) in
+			case fig_dwells of
+				[] ->
+					(-1, False)
+				dwell : dwells ->
+					let should_fill = all (== dwell) (dwells) in
+					(dwell, should_fill)
 	in
 	let
 		ms_quad_rec ::
@@ -454,15 +457,26 @@ ms_quad (etf) (dims) =
 						let interior_tr2 = ms_quad_rec (bd_tr2) (depth + 1) (anch2) (size2) in
 						let interior_bl3 = ms_quad_rec (bd_bl3) (depth + 1) (anch3) (size3) in
 						let interior_br4 = ms_quad_rec (bd_br4) (depth + 1) (anch4) (size4) in
-						concat [
-							[p11, p22, p33, p44, puu, pdd, pll, prr, pcc],
-							l1l, l1u, l2r, l2u, l3d, l3l, l4d, l4r,
-							lcd, lcl, lcr, lcu,
-							interior_tl1,
-							interior_tr2,
-							interior_bl3,
-							interior_br4
-						]
+						let result_interior = concat
+							[
+								[pcc],
+								lcd, lcl, lcr, lcu,
+								interior_tl1,
+								interior_tr2,
+								interior_bl3,
+								interior_br4
+							]
+						in
+						if depth > 0 then
+							result_interior
+						else
+							let result_boundary = concat
+								[
+									[p11, p22, p33, p44, puu, pdd, pll, prr],
+									l1l, l1u, l2r, l2u, l3d, l3l, l4d, l4r
+								]
+							in
+							result_interior ++ result_boundary
 			in
 			result
 	in
@@ -491,7 +505,7 @@ ms_quad (etf) (dims) =
 	let sorted_matrix = sortBy (lexsort) (calced_matrix) in
 	--let nubbed_matrix = nubBy (\a b -> lexsort a b == EQ) (sorted_matrix) in
 	let dwell_matrix  = split_every (w) (sorted_matrix) in -- (nubbed_matrix) in
-	trace ("ms_result " ++ show dwell_matrix) $ 
+	-- trace ("ms_result " ++ show dwell_matrix) $ 
 	let dwell_data = DwellArray { daw = w, dah = h, dwells = dwell_matrix } in
 	dwell_data
 
