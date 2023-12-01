@@ -6,6 +6,7 @@ import Text.Printf
 
 type GFloat  = Float -- Double
 type Point2D = (GFloat, GFloat)
+type Coord2D = (Int, Int)
 
 toFrac :: Real a => a -> GFloat
 toFrac = realToFrac
