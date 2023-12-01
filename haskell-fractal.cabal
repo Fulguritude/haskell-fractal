@@ -25,7 +25,11 @@ source-repository head
 
 library
   exposed-modules:
-      ETF
+      Colors
+      ETF_Algorithms
+      ETF_Protocols
+      ETF_Types
+      GeomCoordUtils
       Math
       Render
   other-modules:

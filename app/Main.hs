@@ -8,7 +8,9 @@ module Main (main) where
 import Graphics.Gloss
 
 import Math
-import ETF
+import ETF_Types
+import ETF_Protocols
+import ETF_Algorithms
 import Render
 
 
