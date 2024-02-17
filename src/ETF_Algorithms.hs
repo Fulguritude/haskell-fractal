@@ -3,7 +3,6 @@
 module ETF_Algorithms (module ETF_Algorithms) where
 
 
-import Debug.Trace
 
 import Data.Maybe
 import Data.List ( sortBy ) --, unionBy )  --, nubBy )
@@ -367,7 +366,7 @@ fill_iteration_data (dwell) (depth) (iteration_data) =
 	in
 	result
 
-ms_quad :: forall a. (Show a, Convert a) => DwellAlgorithm a
+ms_quad :: forall a. (Convert a) => DwellAlgorithm a
 ms_quad (etf) (dims) =
 	let dwell_function = compute_dwell etf etf in
 	let get_geompoint  = build_get_geompoint (dims) in

@@ -1,0 +1,56 @@
+https://stackoverflow.com/questions/36773370/globally-disable-a-default-warning
+https://betterprogramming.pub/haskell-vs-code-setup-in-2021-6267cc991551
+
+
+https://medium.com/@dogwith1eye/setting-up-haskell-in-vs-code-with-stack-and-the-ide-engine-81d49eda3ecf
+https://github.com/haskell/haskell-language-server/issues/366
+https://haskell-language-server.readthedocs.io/en/latest/troubleshooting.html
+https://stackoverflow.com/questions/49119117/can-not-import-modules-in-haskell
+
+https://github.com/haskell/hie-bios#debugging-a-stack-cradle
+
+
+
+
+TODO read when more advanced
+https://lexi-lambda.github.io/blog/2021/03/25/an-introduction-to-typeclass-metaprogramming/
+https://www.haskellforall.com/2012/05/scrap-your-type-classes.html
+https://www.ninebynine.org/Software/Learning-Haskell-Notes.html#type-class-misuse
+https://andrew.gibiansky.com/blog/haskell/haskell-abstractions/
+https://www.adit.io/posts/2013-04-17-functors,_applicatives,_and_monads_in_pictures.html
+
+
+Useful to study project structure
+https://github.com/ploeh/reservation-api-slice-haskell/tree/master
+
+
+In dept books to learn Haskell
+http://learnyouahaskell.com/chapters
+https://book.realworldhaskell.org/read/
+https://kowainik.github.io/projects/learn4haskell
+http://www.happylearnhaskelltutorial.com/contents.html
+https://alexott.net/en/fp/books/#sec7
+
+
+
+Exercism
+https://exercism.org/tracks/haskell
+
+
+
+Other fractals:
+~/Workspace/Web/webdev/react_playground (on Alexis's github)
+~/Workspace/ProgrammingEdu/Rust/fractol
+~/Documents/42/42_Mac/07-fractol
+
+Prettier fractal:
+-  OKLAB
+  - https://www.youtube.com/watch?v=fv-wlo8yVhk
+  - https://bottosson.github.io/posts/oklab/
+  - https://github.com/GarrettGunnell/AcerolaFX/blob/main/Shaders/AcerolaFX_PaletteSwap.fx
+
+
+
+
+First TODO when going back to Haskell Fractal : use simulate to make a game loop and interaction (see https://andrew.gibiansky.com/blog/haskell/haskell-gloss/ )
+

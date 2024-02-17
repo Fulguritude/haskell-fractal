@@ -7,7 +7,6 @@ import Graphics.Gloss
 
 import Math
 import ETF_Types
-import Render
 
 
 
