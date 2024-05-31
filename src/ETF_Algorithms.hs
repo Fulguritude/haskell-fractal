@@ -184,7 +184,7 @@ get_points_to_check (quad_bounds) =
 	let
 		point_11 = (x_ini, y_ini)
 		point_22 = (x_end, y_ini)
-		point_33 = (x_end, y_ini)
+		point_33 = (x_ini, y_end)
 		point_44 = (x_end, y_end)
 	
 		point_uu = (x_mid, y_ini)
